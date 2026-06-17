@@ -50,45 +50,40 @@ export default function InvitePage() {
   const errors = actionData?.errors ?? {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-sky-200/30 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-cyan-200/30 blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
       <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <Link to="/" className="inline-block">
             <GlaciaLogo size="lg" />
           </Link>
         </div>
 
         {invalid ? (
-          <IcyCard>
-            <IcyCardBody className="p-8 text-center">
-              <div className="text-4xl mb-4">❄️</div>
-              <h2 className="text-xl font-bold text-slate-800 mb-2">Invalid or Expired Invite</h2>
-              <p className="text-slate-500 text-sm mb-6">
+          <IcyCard className="hard-shadow">
+            <IcyCardBody className="p-8">
+              <p className="eyebrow mb-3" style={{ color: "var(--err)" }}>LINK EXPIRED</p>
+              <h2 className="display text-2xl text-ink mb-2">Invalid or Expired Invite</h2>
+              <p className="text-ink-2 text-sm mb-6">
                 This invitation link has expired or already been used. Ask your HR admin to send a new invite.
               </p>
-              <Link to="/login" className="text-sky-600 font-medium hover:underline text-sm">
-                Go to Sign In
+              <Link to="/login" className="font-mono font-bold text-accent-dark hover:underline text-xs uppercase tracking-wide">
+                Go to Sign In →
               </Link>
             </IcyCardBody>
           </IcyCard>
         ) : (
-          <IcyCard>
+          <IcyCard className="hard-shadow">
             <IcyCardBody className="p-8">
               <div className="mb-6">
-                <p className="text-sm text-slate-500 mb-1">You're invited to join</p>
-                <h2 className="text-xl font-bold text-slate-800">
+                <p className="eyebrow mb-2">YOU'RE INVITED TO JOIN</p>
+                <h2 className="display text-2xl text-ink">
                   {(invite as { tenant: { name: string } }).tenant?.name}
                 </h2>
-                <p className="text-sm text-sky-600 mt-1">{invite?.email}</p>
+                <p className="text-sm font-mono text-accent-dark mt-1">{invite?.email}</p>
               </div>
 
               {errors.form && (
-                <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="bevel-sunken mb-5 p-4 text-sm font-mono text-err">
                   {errors.form}
                 </div>
               )}

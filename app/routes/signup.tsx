@@ -78,33 +78,27 @@ export default function SignupPage() {
   const values = actionData?.values ?? {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
-      {/* Frost blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-sky-200/30 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-cyan-200/30 blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4 py-10">
       <div className="relative w-full max-w-lg">
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <Link to="/" className="inline-block">
             <GlaciaLogo size="lg" />
           </Link>
-          <p className="mt-3 text-slate-500 text-sm">Create your company account</p>
+          <p className="eyebrow mt-4">CREATE YOUR COMPANY ACCOUNT</p>
         </div>
 
-        <IcyCard>
+        <IcyCard className="hard-shadow">
           <IcyCardBody className="p-8">
             {errors.form && (
-              <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+              <div className="bevel-sunken mb-6 p-4 text-sm font-mono text-err">
                 {errors.form}
               </div>
             )}
 
             <Form method="post" className="space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-slate-800">Company Details</h2>
-                <p className="text-xs text-slate-400">This creates your dedicated HRMS workspace</p>
+              <div>
+                <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink">Company Details</h2>
+                <p className="eyebrow mt-1">CREATES YOUR DEDICATED HRMS WORKSPACE</p>
               </div>
 
               <FormField
@@ -126,9 +120,9 @@ export default function SignupPage() {
                 hint="glacia.supernovae.me/nova — lowercase, letters, numbers, hyphens"
               />
 
-              <div className="border-t border-sky-100 pt-5 space-y-1">
-                <h2 className="text-lg font-semibold text-slate-800">Your Account</h2>
-                <p className="text-xs text-slate-400">You will be the owner</p>
+              <div className="rule-solid pt-5">
+                <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink">Your Account</h2>
+                <p className="eyebrow mt-1">YOU WILL BE THE OWNER</p>
               </div>
 
               <FormField
@@ -176,18 +170,16 @@ export default function SignupPage() {
               </Button>
             </Form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
+            <p className="mt-6 text-sm text-ink-2">
               Already have an account?{" "}
-              <Link to="/login" className="text-sky-600 font-medium hover:underline">
-                Sign in
+              <Link to="/login" className="font-mono font-bold text-accent-dark hover:underline uppercase text-xs tracking-wide">
+                Sign in →
               </Link>
             </p>
           </IcyCardBody>
         </IcyCard>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          By signing up you agree to our Terms of Service and Privacy Policy.
-        </p>
+        <p className="eyebrow mt-6">BY SIGNING UP YOU AGREE TO OUR TERMS & PRIVACY POLICY</p>
       </div>
     </div>
   );

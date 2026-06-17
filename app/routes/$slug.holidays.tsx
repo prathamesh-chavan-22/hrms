@@ -6,22 +6,18 @@ export function meta() {
 
 export default function HolidaysPage() {
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-5 lg:p-7 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Holiday Calendar</h1>
-        <p className="text-slate-500 mt-1 text-sm">View and manage company and national holidays</p>
+        <p className="eyebrow mb-2">HOLIDAYS</p>
+        <h1 className="display text-3xl text-ink">Company & national calendar</h1>
       </div>
-      <IcyCard>
-        <IcyCardBody className="py-20 text-center">
-          <div className="text-5xl mb-4">🏖️</div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-2">Coming in Phase 2</h2>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">
+      <IcyCard className="hard-shadow">
+        <IcyCardBody className="py-16 max-w-md">
+          <span className="chip chip-accent mb-4">PHASE 02</span>
+          <h2 className="display text-2xl text-ink mb-2">Under development</h2>
+          <p className="text-ink-2 text-sm">
             Holiday calendar management — add national holidays, optional days, and company-specific holidays for each year.
           </p>
-          <span className="mt-4 inline-flex items-center gap-1.5 bg-sky-100 text-sky-600 px-3 py-1.5 rounded-full text-xs font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            Under development
-          </span>
         </IcyCardBody>
       </IcyCard>
     </div>

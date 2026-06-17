@@ -95,20 +95,20 @@ export default function SettingsPage() {
   const displayLogoUrl = actionData?.logoUrl ?? tenant.logo_url;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-5 lg:p-7 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
-        <p className="text-slate-500 mt-1 text-sm">Manage your company configuration</p>
+        <p className="eyebrow mb-2">SETTINGS</p>
+        <h1 className="display text-3xl text-ink">Company Configuration</h1>
       </div>
 
       {/* Flash */}
       {actionData?.success && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+        <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--ok)" }}>
           {actionData.success}
         </div>
       )}
       {actionData?.error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+        <div className="bevel-sunken p-4 text-sm font-mono text-err">
           {actionData.error}
         </div>
       )}
@@ -116,8 +116,7 @@ export default function SettingsPage() {
       {/* Company branding */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">Company Branding</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Name and accent colour shown across your HRMS</p>
+          <h2 className="eyebrow">COMPANY BRANDING</h2>
         </IcyCardHeader>
         <IcyCardBody>
           <Form method="post" className="space-y-5">
@@ -130,28 +129,28 @@ export default function SettingsPage() {
               placeholder="Nova Technologies"
             />
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Accent Colour</label>
+              <div>
+                <label className="eyebrow block mb-1.5">Accent Colour</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
                     name="accentColor"
-                    defaultValue={tenant.theme?.accent ?? "#38bdf8"}
-                    className="h-10 w-16 rounded-lg border border-sky-200 cursor-pointer"
+                    defaultValue={tenant.theme?.accent ?? "#06B6D4"}
+                    className="h-10 w-16 bevel-sunken cursor-pointer p-0.5"
                   />
-                  <span className="text-xs text-slate-400">Primary accent</span>
+                  <span className="eyebrow">PRIMARY</span>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Dark Accent</label>
+              <div>
+                <label className="eyebrow block mb-1.5">Dark Accent</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
                     name="accentDark"
-                    defaultValue={(tenant.theme as Tenant["theme"])?.accentDark ?? "#0ea5e9"}
-                    className="h-10 w-16 rounded-lg border border-sky-200 cursor-pointer"
+                    defaultValue={(tenant.theme as Tenant["theme"])?.accentDark ?? "#0E7490"}
+                    className="h-10 w-16 bevel-sunken cursor-pointer p-0.5"
                   />
-                  <span className="text-xs text-slate-400">Dark variant</span>
+                  <span className="eyebrow">DARK</span>
                 </div>
               </div>
             </div>
@@ -165,8 +164,7 @@ export default function SettingsPage() {
       {/* Logo upload */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">Company Logo</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Upload a PNG, JPEG, or WebP (max 2 MB). Shown in the sidebar.</p>
+          <h2 className="eyebrow">COMPANY LOGO</h2>
         </IcyCardHeader>
         <IcyCardBody className="space-y-5">
           {displayLogoUrl && (
@@ -174,12 +172,12 @@ export default function SettingsPage() {
               <img
                 src={displayLogoUrl}
                 alt="Company logo"
-                className="w-20 h-20 rounded-xl object-contain border border-sky-100 bg-white p-1"
+                className="w-20 h-20 object-contain bevel bg-surface p-1"
               />
               <Form method="post">
                 <input type="hidden" name="intent" value="remove_logo" />
-                <button type="submit" className="text-sm text-red-500 hover:underline font-medium">
-                  Remove Logo
+                <button type="submit" className="eyebrow hover:underline" style={{ color: "var(--err)" }}>
+                  REMOVE LOGO
                 </button>
               </Form>
             </div>
@@ -187,15 +185,15 @@ export default function SettingsPage() {
 
           <Form method="post" encType="multipart/form-data" className="space-y-4">
             <input type="hidden" name="intent" value="upload_logo" />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">
-                {displayLogoUrl ? "Replace Logo" : "Upload Logo"}
+            <div>
+              <label className="eyebrow block mb-1.5">
+                {displayLogoUrl ? "REPLACE LOGO" : "UPLOAD LOGO"}
               </label>
               <input
                 type="file"
                 name="logo"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200 cursor-pointer"
+                className="block w-full text-sm text-ink-2 font-mono file:mr-4 file:py-2 file:px-4 file:border-2 file:border-rule file:text-xs file:font-mono file:font-bold file:uppercase file:bg-accent file:text-[#F4F9FC] cursor-pointer"
               />
             </div>
             <Button type="submit" loading={isSubmitting && currentIntent === "upload_logo"}>
@@ -208,19 +206,16 @@ export default function SettingsPage() {
       {/* GPS Attendance */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">GPS Attendance</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            When enabled, employees must share their GPS location to punch in/out.
-          </p>
+          <h2 className="eyebrow">GPS ATTENDANCE</h2>
         </IcyCardHeader>
         <IcyCardBody>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-700">GPS Required for Attendance</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Currently:{" "}
-                <span className={`font-semibold ${tenant.gps_required ? "text-emerald-600" : "text-slate-500"}`}>
-                  {tenant.gps_required ? "Enabled" : "Disabled"}
+              <p className="text-sm font-bold text-ink">GPS Required for Attendance</p>
+              <p className="eyebrow mt-1">
+                CURRENTLY:{" "}
+                <span style={{ color: tenant.gps_required ? "var(--ok)" : "var(--muted)" }}>
+                  {tenant.gps_required ? "ENABLED" : "DISABLED"}
                 </span>
               </p>
             </div>
@@ -243,40 +238,32 @@ export default function SettingsPage() {
       {/* Plan info */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">Current Plan</h2>
+          <h2 className="eyebrow">CURRENT PLAN</h2>
         </IcyCardHeader>
         <IcyCardBody>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-lg font-bold text-slate-800">{plan.name}</p>
-              <p className="text-sm text-slate-500">
-                {plan.maxEmployees} employees max &middot; {plan.price === 0 ? "Free" : `₹${plan.price}/mo`}
+              <p className="display text-xl text-ink">{plan.name}</p>
+              <p className="eyebrow mt-1 tnum">
+                {plan.maxEmployees} EMPLOYEES MAX · {plan.price === 0 ? "FREE" : `₹${plan.price}/MO`}
               </p>
             </div>
             <Button variant="secondary" size="sm" disabled title="Razorpay billing coming soon">
-              Upgrade Plan (Coming Soon)
+              Upgrade (Soon)
             </Button>
           </div>
-          <p className="mt-3 text-xs text-sky-500 bg-sky-50 rounded-lg px-3 py-2 inline-block">
-            Billing integration via Razorpay is coming soon.
-          </p>
+          <p className="mt-3 chip">RAZORPAY BILLING COMING SOON</p>
         </IcyCardBody>
       </IcyCard>
 
       {/* Company URL */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">Your HRMS URL</h2>
+          <h2 className="eyebrow">YOUR HRMS URL</h2>
         </IcyCardHeader>
         <IcyCardBody>
-          <div className="flex items-center gap-3 bg-sky-50 rounded-xl px-4 py-3 font-mono text-sm text-sky-700 border border-sky-200">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path
-                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          <div className="bevel-sunken flex items-center gap-3 px-4 py-3 font-mono text-sm text-accent-dark">
+            <span className="text-muted">↳</span>
             glacia.supernovae.me/{tenant.slug}
           </div>
         </IcyCardBody>

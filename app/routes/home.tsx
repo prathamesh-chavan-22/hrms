@@ -4,172 +4,129 @@ import { Button } from "~/components/Button";
 
 export function meta() {
   return [
-    { title: "Glacia — Modern HRMS for Growing Teams" },
-    { name: "description", content: "Multi-tenant HR management software with attendance, leave, and team management. Icy cool. Built for India." },
+    { title: "Glacia — HRMS for Growing Teams" },
+    { name: "description", content: "Multi-tenant HR management software with attendance, leave, and team management. A tool, not a brochure. Built for India." },
   ];
 }
 
 const features = [
   {
-    icon: "📍",
-    title: "GPS Attendance",
-    desc: "Employees punch in/out with verified GPS location. HR sees all locations on an interactive map via OpenStreetMap.",
+    no: "01",
+    title: "GPS ATTENDANCE",
+    desc: "Employees punch in/out with verified GPS location. HR sees every location on an interactive OpenStreetMap.",
   },
   {
-    icon: "🗓️",
-    title: "Leave Management",
-    desc: "Configure leave types, carry-forward rules, national holidays, and approval workflows — all in one CMS.",
+    no: "02",
+    title: "LEAVE POLICY",
+    desc: "Configure leave types, carry-forward rules, national holidays, and approval workflows in one place.",
   },
   {
-    icon: "👥",
-    title: "Team Directory",
-    desc: "Invite employees by email. Manage roles — Employee, HR, Admin, Owner — with fine-grained permissions.",
+    no: "03",
+    title: "TEAM DIRECTORY",
+    desc: "Invite by email. Roles — Employee, HR, Admin, Owner — with fine-grained permissions.",
   },
   {
-    icon: "🏢",
-    title: "Your HRMS, Your Brand",
-    desc: "Upload your company logo, pick your accent colour. Your team logs in at glacia.supernovae.me/yourcompany.",
+    no: "04",
+    title: "OWN BRANDING",
+    desc: "Upload your logo, pick an accent. Your team signs in at glacia.supernovae.me/yourcompany.",
   },
   {
-    icon: "🤖",
-    title: "Rule-based Assistant",
-    desc: "An intelligent no-LLM chatbot that answers HR queries — leave balance, holidays, attendance — from your data.",
+    no: "05",
+    title: "RULE-BASED BOT",
+    desc: "A no-LLM assistant that answers leave balance, holidays, and attendance straight from your data.",
   },
   {
-    icon: "🔒",
-    title: "Enterprise-grade Security",
-    desc: "Row-level security enforced at the database layer. Every tenant is completely isolated.",
+    no: "06",
+    title: "ROW-LEVEL SECURITY",
+    desc: "Isolation enforced at the database layer. Every tenant is sealed off from every other.",
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50">
-      {/* Frost blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-sky-200/25 blur-3xl" />
-        <div className="absolute bottom-20 right-0 w-96 h-96 rounded-full bg-cyan-200/30 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-sky-300/20 blur-3xl" />
-      </div>
-
-      {/* Nav */}
-      <nav className="relative sticky top-0 z-40 bg-white/70 backdrop-blur-lg border-b border-sky-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+    <div className="min-h-screen bg-bg">
+      {/* Top chrome */}
+      <nav className="topbar sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <GlaciaLogo size="md" />
-          <div className="flex items-center gap-3">
-            <Link to="/pricing" className="text-sm font-medium text-slate-600 hover:text-sky-700 transition-colors px-3 py-1.5">
-              Pricing
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/pricing" className="hidden sm:block eyebrow hover:text-ink transition-colors px-2 py-1">
+              PRICING
             </Link>
             <Link to="/login">
               <Button variant="secondary" size="sm">Sign In</Button>
             </Link>
             <Link to="/signup">
-              <Button size="sm">Get Started Free</Button>
+              <Button size="sm">Get Started</Button>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="relative pt-24 pb-20 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-sky-100 text-sky-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6 border border-sky-200">
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-            Multi-tenant HRMS for Indian companies
-          </div>
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-slate-900 leading-tight tracking-tight mb-6">
-            HR management,{" "}
-            <span className="bg-gradient-to-r from-sky-500 to-cyan-500 bg-clip-text text-transparent">
-              crystal clear.
-            </span>
-          </h1>
-          <p className="text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Glacia gives your team a beautiful, branded HRMS — GPS attendance, leave policies, team management and an AI-powered assistant. Free to start.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup">
-              <Button size="lg">
-                Start for Free
-              </Button>
-            </Link>
-            <Link to="/pricing">
-              <Button variant="secondary" size="lg">
-                View Pricing
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Hero card mockup */}
-        <div className="mt-16 max-w-5xl mx-auto relative">
-          <div className="bg-white/60 backdrop-blur-md rounded-3xl border border-sky-100 shadow-[0_20px_60px_rgba(14,165,233,0.12)] overflow-hidden">
-            {/* Mock browser bar */}
-            <div className="bg-sky-50/80 border-b border-sky-100 px-4 py-3 flex items-center gap-3">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-300" />
-                <div className="w-3 h-3 rounded-full bg-amber-300" />
-                <div className="w-3 h-3 rounded-full bg-emerald-300" />
-              </div>
-              <div className="flex-1 bg-white rounded-lg px-3 py-1 text-xs text-slate-400 border border-sky-100 max-w-xs mx-auto text-center">
-                glacia.supernovae.me/nova/dashboard
-              </div>
+      {/* Hero — asymmetric, left-weighted */}
+      <section className="border-b-2 border-rule">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-12 gap-8 py-16 lg:py-20">
+          <div className="lg:col-span-7">
+            <p className="eyebrow mb-5">MULTI-TENANT HRMS · BUILT FOR INDIA</p>
+            <h1 className="display text-5xl sm:text-6xl lg:text-7xl text-ink mb-6">
+              HR MANAGEMENT,<br />
+              <span className="text-accent-dark">WITHOUT THE FLUFF.</span>
+            </h1>
+            <p className="text-ink-2 text-base max-w-xl mb-8 leading-relaxed">
+              Glacia is a branded HR workspace for your company — GPS attendance, leave
+              policy, team management, and a rule-based assistant. Dense, fast, free to start.
+            </p>
+            <div className="flex flex-wrap gap-3 mb-10">
+              <Link to="/signup">
+                <Button size="lg">Start for Free →</Button>
+              </Link>
+              <Link to="/pricing">
+                <Button variant="secondary" size="lg">View Pricing</Button>
+              </Link>
             </div>
-            {/* Mock dashboard */}
-            <div className="flex min-h-72">
-              {/* Sidebar */}
-              <div className="w-52 bg-white/70 border-r border-sky-50 p-3 space-y-1 hidden sm:block">
-                <div className="px-2 py-3 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">N</div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-700">Nova Tech</div>
-                      <div className="text-xs text-slate-400">/nova</div>
-                    </div>
-                  </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="chip">NO CREDIT CARD</span>
+              <span className="chip">UP TO 5 FREE</span>
+              <span className="chip chip-accent">BETA</span>
+            </div>
+          </div>
+
+          {/* Window mock */}
+          <div className="lg:col-span-5">
+            <div className="bevel hard-shadow">
+              {/* Title bar */}
+              <div className="panel-header flex items-center gap-2 px-3 py-2">
+                <div className="flex gap-1">
+                  <span className="w-3 h-3 bevel-sunken !shadow-none" />
+                  <span className="w-3 h-3 bevel-sunken !shadow-none" />
+                  <span className="w-3 h-3 bevel-accent !shadow-none" />
                 </div>
-                {["Dashboard", "Attendance", "Leave", "Holidays", "Employees", "Settings"].map((item, i) => (
-                  <div key={item} className={`px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 ${i === 0 ? "bg-sky-100 text-sky-700" : "text-slate-500"}`}>
-                    <span className="w-4 h-4 rounded bg-sky-100/50 flex-shrink-0" />
-                    {item}
-                  </div>
-                ))}
+                <span className="ml-2 eyebrow truncate">/NOVA/DASHBOARD</span>
               </div>
-              {/* Content */}
-              <div className="flex-1 p-4 space-y-3">
-                <div className="text-sm font-bold text-slate-700">Good morning, Arjun 👋</div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="p-3 space-y-3">
+                <p className="text-sm font-bold text-ink">Good morning, Arjun</p>
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { l: "Employees", v: "18", c: "bg-sky-100" },
-                    { l: "On Leave", v: "3", c: "bg-amber-100" },
-                    { l: "Present Today", v: "14", c: "bg-emerald-100" },
-                    { l: "Holidays", v: "2", c: "bg-violet-100" },
+                    { l: "EMPLOYEES", v: "18" },
+                    { l: "ON LEAVE", v: "03" },
+                    { l: "PRESENT", v: "14" },
+                    { l: "HOLIDAYS", v: "02" },
                   ].map((s) => (
-                    <div key={s.l} className={`${s.c} rounded-xl p-3`}>
-                      <div className="text-lg font-bold text-slate-800">{s.v}</div>
-                      <div className="text-xs text-slate-500">{s.l}</div>
+                    <div key={s.l} className="bevel-sunken px-3 py-2">
+                      <p className="text-2xl font-bold text-ink tnum leading-none">{s.v}</p>
+                      <p className="eyebrow mt-1.5">{s.l}</p>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-sky-50 rounded-xl p-3 space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-600">Recent Team</div>
-                    {["Priya M.", "Rahul K.", "Sneha P."].map((n) => (
-                      <div key={n} className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-sky-200 flex items-center justify-center text-sky-700 text-xs font-bold">{n[0]}</div>
-                        <span className="text-xs text-slate-600">{n}</span>
-                        <span className="ml-auto text-xs text-emerald-500 bg-emerald-50 px-1.5 rounded">active</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-cyan-50 rounded-xl p-3 space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-600">Upcoming Holidays</div>
-                    {[["Aug 15", "Independence Day"], ["Oct 2", "Gandhi Jayanti"]].map(([d, n]) => (
-                      <div key={n} className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-sky-600 w-10">{d}</span>
-                        <span className="text-xs text-slate-600">{n}</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="bevel-sunken p-3 space-y-2">
+                  <p className="eyebrow">RECENT TEAM</p>
+                  {["Priya M.", "Rahul K.", "Sneha P."].map((n) => (
+                    <div key={n} className="flex items-center gap-2">
+                      <span className="bevel-accent w-5 h-5 flex items-center justify-center text-[9px] font-mono font-bold !shadow-none">{n[0]}</span>
+                      <span className="text-xs text-ink-2">{n}</span>
+                      <span className="ml-auto chip" style={{ backgroundColor: "var(--ok)", color: "#F4F9FC" }}>ACTIVE</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -177,63 +134,53 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="relative py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              Everything your HR team needs
-            </h2>
-            <p className="text-slate-500 max-w-xl mx-auto">
-              From attendance tracking to leave management — Glacia handles it all with a beautiful, icy interface.
-            </p>
+      {/* Features — dense beveled grid, mono indices, no emoji */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
+          <div>
+            <p className="eyebrow mb-2">WHAT'S INSIDE</p>
+            <h2 className="display text-3xl sm:text-4xl text-ink">Everything HR needs.<br />Nothing it doesn't.</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="bg-white/60 backdrop-blur-md border border-sky-100 rounded-2xl p-6 hover:shadow-[0_8px_32px_rgba(14,165,233,0.1)] transition-all hover:-translate-y-0.5"
-              >
-                <div className="text-3xl mb-4">{f.icon}</div>
-                <h3 className="text-base font-semibold text-slate-800 mb-2">{f.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
+          <span className="chip">06 MODULES</span>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {features.map((f) => (
+            <div key={f.title} className="bevel p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="bevel-accent w-8 h-8 flex items-center justify-center font-mono font-bold text-xs !shadow-[inset_2px_2px_0_0_rgba(255,255,255,0.45),inset_-2px_-2px_0_0_var(--accent-darker)]">{f.no}</span>
               </div>
-            ))}
-          </div>
+              <h3 className="font-mono font-bold text-sm tracking-[0.04em] text-ink">{f.title}</h3>
+              <p className="text-sm text-ink-2 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="relative py-20 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-sky-500 to-cyan-500 rounded-3xl p-1">
-            <div className="bg-white rounded-[22px] px-8 py-12">
-              <GlaciaLogo size="lg" className="mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                Start managing HR the right way
-              </h2>
-              <p className="text-slate-500 mb-8">
-                Free for up to 5 employees. No credit card required.
-              </p>
-              <Link to="/signup">
-                <Button size="lg">Create Your Company Now</Button>
-              </Link>
+      {/* CTA band — accent + dot grid */}
+      <section className="border-y-2 border-rule">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <div className="bevel-accent dot-grid hard-shadow p-8 sm:p-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div>
+              <p className="eyebrow mb-3" style={{ color: "rgba(255,255,255,0.75)" }}>GET STARTED</p>
+              <h2 className="display text-3xl sm:text-4xl text-[#F4F9FC]">Run HR the right way.</h2>
+              <p className="text-[#F4F9FC]/80 mt-2 text-sm font-mono">FREE FOR UP TO 5 EMPLOYEES · NO CARD</p>
             </div>
+            <Link to="/signup">
+              <Button variant="secondary" size="lg">Create Company →</Button>
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative border-t border-sky-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <GlaciaLogo size="sm" />
-          <div className="flex gap-6 text-sm text-slate-400">
-            <Link to="/pricing" className="hover:text-sky-600 transition-colors">Pricing</Link>
-            <Link to="/login" className="hover:text-sky-600 transition-colors">Sign In</Link>
-            <Link to="/signup" className="hover:text-sky-600 transition-colors">Sign Up</Link>
-          </div>
-          <p className="text-xs text-slate-400">© {new Date().getFullYear()} Glacia HRMS · Powered by Supernovae</p>
+      <footer className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <GlaciaLogo size="sm" />
+        <div className="flex gap-5">
+          <Link to="/pricing" className="eyebrow hover:text-ink transition-colors">PRICING</Link>
+          <Link to="/login" className="eyebrow hover:text-ink transition-colors">SIGN IN</Link>
+          <Link to="/signup" className="eyebrow hover:text-ink transition-colors">SIGN UP</Link>
         </div>
+        <p className="eyebrow">© {new Date().getFullYear()} GLACIA · SUPERNOVAE</p>
       </footer>
     </div>
   );

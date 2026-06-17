@@ -5,22 +5,31 @@ interface BadgeProps {
 }
 
 const variants = {
-  sky: "bg-sky-100 text-sky-700 border border-sky-200",
-  green: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-  yellow: "bg-amber-100 text-amber-700 border border-amber-200",
-  red: "bg-red-100 text-red-700 border border-red-200",
-  slate: "bg-slate-100 text-slate-600 border border-slate-200",
-  purple: "bg-violet-100 text-violet-700 border border-violet-200",
+  sky: "bg-accent text-[#F4F9FC]",
+  green: "text-[#F4F9FC]",
+  yellow: "text-[#F4F9FC]",
+  red: "text-[#F4F9FC]",
+  slate: "bg-surface text-ink-2",
+  purple: "bg-ink text-bg",
+};
+
+const inlineBg: Record<string, string | undefined> = {
+  green: "var(--ok)",
+  yellow: "var(--warn)",
+  red: "var(--err)",
 };
 
 const sizes = {
-  sm: "px-2 py-0.5 text-xs",
-  md: "px-2.5 py-1 text-xs",
+  sm: "text-[9px] px-1.5 py-0.5",
+  md: "text-[10px] px-2 py-0.5",
 };
 
 export function Badge({ children, variant = "sky", size = "md" }: BadgeProps) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full font-medium ${variants[variant]} ${sizes[size]}`}>
+    <span
+      style={inlineBg[variant] ? { backgroundColor: inlineBg[variant] } : undefined}
+      className={`chip ${variants[variant]} ${sizes[size]}`}
+    >
       {children}
     </span>
   );

@@ -21,7 +21,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;700&display=swap",
   },
 ];
 
@@ -31,11 +31,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#0ea5e9" />
+        <meta name="theme-color" content="#06B6D4" />
         <Meta />
         <Links />
       </head>
-      <body className="bg-glacier-50 text-ice-800 antialiased">
+      <body className="bg-bg text-ink antialiased">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -65,21 +65,22 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
-      <div className="text-center max-w-md">
-        <GlaciaLogo size="lg" className="justify-center mb-8" />
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">{message}</h1>
-        <p className="text-slate-500 mb-8">{details}</p>
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+      <div className="bevel hard-shadow max-w-md w-full p-8">
+        <GlaciaLogo size="lg" className="mb-6" />
+        <p className="eyebrow mb-2">ERROR{isRouteErrorResponse(error) ? ` · ${error.status}` : ""}</p>
+        <h1 className="display text-3xl text-ink mb-2">{message}</h1>
+        <p className="text-ink-2 mb-8">{details}</p>
         {stack && import.meta.env.DEV && (
-          <pre className="text-left text-xs bg-slate-900 text-slate-300 p-4 rounded-xl overflow-x-auto mb-6">
+          <pre className="text-left text-xs bg-ink text-bg p-4 overflow-x-auto mb-6 font-mono border-2 border-rule">
             {stack}
           </pre>
         )}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-sky-400 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:from-sky-500 hover:to-cyan-600 transition-all"
+          className="bevel-accent bevel-press inline-flex items-center gap-2 px-6 py-3 font-bold text-sm uppercase tracking-wide font-mono"
         >
-          Back to Home
+          ← Back to Home
         </Link>
       </div>
     </div>

@@ -50,24 +50,19 @@ interface StatCardProps {
   label: string;
   value: string | number;
   sub?: string;
-  icon: string;
-  color: string;
+  tag: string;
 }
 
-function StatCard({ label, value, sub, icon, color }: StatCardProps) {
+function StatCard({ label, value, sub, tag }: StatCardProps) {
   return (
-    <IcyCard>
-      <IcyCardBody className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${color}`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-800">{value}</p>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          {sub && <p className="text-xs text-slate-400">{sub}</p>}
-        </div>
-      </IcyCardBody>
-    </IcyCard>
+    <div className="bevel p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="eyebrow">{label}</p>
+        <span className="chip chip-accent">{tag}</span>
+      </div>
+      <p className="display text-3xl text-ink tnum">{value}</p>
+      {sub && <p className="eyebrow mt-1.5">{sub}</p>}
+    </div>
   );
 }
 
@@ -79,49 +74,53 @@ export default function DashboardPage() {
   const isHR = ["owner", "hr", "admin"].includes(profile.role);
 
   return (
-    <div className="p-6 lg:p-8 space-y-8">
+    <div className="p-5 lg:p-7 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">
-          Good day, {profile.full_name.split(" ")[0]} 👋
-        </h1>
-        <p className="text-slate-500 mt-1 text-sm">
-          {tenant.name} &middot; {plan.name} Plan &middot; {totalEmployees}/{plan.maxEmployees} employees
-        </p>
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <p className="eyebrow mb-2">DASHBOARD</p>
+          <h1 className="display text-3xl text-ink">
+            Good day, {profile.full_name.split(" ")[0]}.
+          </h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="chip">{tenant.name.toUpperCase()}</span>
+          <span className="chip chip-accent">{plan.name.toUpperCase()}</span>
+          <span className="chip tnum">{totalEmployees}/{plan.maxEmployees} STAFF</span>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Employees" value={totalEmployees} sub={`of ${plan.maxEmployees} in ${plan.name}`} icon="👥" color="bg-sky-100" />
-        <StatCard label="Upcoming Holidays" value={upcomingHolidays.length} sub="in the next days" icon="🗓️" color="bg-cyan-100" />
-        <StatCard label="Your Plan" value={plan.name} sub={plan.price === 0 ? "Free tier" : `₹${plan.price}/mo`} icon="⭐" color="bg-violet-100" />
-        <StatCard label="GPS Attendance" value={tenant.gps_required ? "Enabled" : "Disabled"} sub="Location-based punch" icon="📍" color="bg-emerald-100" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="TOTAL EMPLOYEES" value={totalEmployees} sub={`OF ${plan.maxEmployees} IN ${plan.name.toUpperCase()}`} tag="HEAD" />
+        <StatCard label="UPCOMING HOLIDAYS" value={String(upcomingHolidays.length).padStart(2, "0")} sub="NEXT DAYS" tag="CAL" />
+        <StatCard label="YOUR PLAN" value={plan.name} sub={plan.price === 0 ? "FREE TIER" : `₹${plan.price}/MO`} tag="TIER" />
+        <StatCard label="GPS ATTENDANCE" value={tenant.gps_required ? "ON" : "OFF"} sub="LOCATION PUNCH" tag="GEO" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent Employees (HR only) */}
         {isHR && (
           <IcyCard>
             <IcyCardHeader>
-              <h2 className="text-base font-semibold text-slate-800">Recent Team Members</h2>
+              <h2 className="eyebrow">RECENT TEAM MEMBERS</h2>
             </IcyCardHeader>
             <IcyCardBody className="p-0">
               {recentEmployees.length === 0 ? (
-                <div className="px-6 py-8 text-center">
-                  <p className="text-4xl mb-3">👤</p>
-                  <p className="text-slate-500 text-sm">No employees yet. Invite your team!</p>
+                <div className="px-5 py-10 text-center">
+                  <p className="text-ink-2 text-sm">No employees yet. Invite your team.</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-sky-50">
+                <ul>
                   {recentEmployees.map((emp) => (
-                    <li key={emp.id} className="px-6 py-3.5 flex items-center justify-between">
+                    <li key={emp.id} className="px-5 py-3 flex items-center justify-between rule-dashed first:border-t-0">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-sm font-bold">
+                        <div className="bevel-accent w-8 h-8 flex items-center justify-center text-xs font-mono font-bold !shadow-none">
                           {emp.full_name.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">{emp.full_name}</p>
-                          <p className="text-xs text-slate-400">{(emp as Profile).designation ?? (emp as Profile).department ?? "—"}</p>
+                          <p className="text-sm font-bold text-ink">{emp.full_name}</p>
+                          <p className="eyebrow mt-0.5">{((emp as Profile).designation ?? (emp as Profile).department ?? "—").toUpperCase()}</p>
                         </div>
                       </div>
                       <Badge {...statusBadge((emp as Profile).status)} size="sm">{(emp as Profile).status}</Badge>
@@ -136,33 +135,26 @@ export default function DashboardPage() {
         {/* Upcoming Holidays */}
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="text-base font-semibold text-slate-800">Upcoming Holidays</h2>
+            <h2 className="eyebrow">UPCOMING HOLIDAYS</h2>
           </IcyCardHeader>
           <IcyCardBody className="p-0">
             {upcomingHolidays.length === 0 ? (
-              <div className="px-6 py-8 text-center">
-                <p className="text-4xl mb-3">🏖️</p>
-                <p className="text-slate-500 text-sm">No upcoming holidays</p>
+              <div className="px-5 py-10 text-center">
+                <p className="text-ink-2 text-sm">No upcoming holidays.</p>
               </div>
             ) : (
-              <ul className="divide-y divide-sky-50">
+              <ul>
                 {upcomingHolidays.map((h) => {
                   const d = new Date(h.date);
                   return (
-                    <li key={h.id} className="px-6 py-3.5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 text-center">
-                          <p className="text-xs text-sky-500 font-medium uppercase">
-                            {d.toLocaleDateString("en-IN", { month: "short" })}
-                          </p>
-                          <p className="text-lg font-bold text-slate-800 leading-tight">
-                            {d.getDate()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{h.name}</p>
-                          <p className="text-xs text-slate-400 capitalize">{h.type}</p>
-                        </div>
+                    <li key={h.id} className="px-5 py-3 flex items-center gap-4 rule-dashed first:border-t-0">
+                      <div className="bevel-sunken w-12 text-center py-1">
+                        <p className="eyebrow">{d.toLocaleDateString("en-IN", { month: "short" }).toUpperCase()}</p>
+                        <p className="text-lg font-bold text-ink leading-tight tnum">{d.getDate()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-ink">{h.name}</p>
+                        <p className="eyebrow mt-0.5">{h.type}</p>
                       </div>
                     </li>
                   );

@@ -66,36 +66,32 @@ export default function LoginPage() {
   const welcomeSlug = searchParams.get("slug");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-sky-200/30 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-cyan-200/30 blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
       <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <Link to="/" className="inline-block">
             <GlaciaLogo size="lg" />
           </Link>
-          <p className="mt-3 text-slate-500 text-sm">Sign in to your workspace</p>
+          <p className="eyebrow mt-4">SIGN IN TO YOUR WORKSPACE</p>
         </div>
 
         {isWelcome && (
-          <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
-            🎉 Company created! Sign in to access your dashboard
-            {welcomeSlug && <span className="font-mono ml-1">({welcomeSlug})</span>}.
+          <div className="bevel mb-5 p-4 text-sm" style={{ borderColor: "var(--ok)" }}>
+            <p className="eyebrow mb-1" style={{ color: "var(--ok)" }}>COMPANY CREATED</p>
+            Sign in to access your dashboard
+            {welcomeSlug && <span className="font-mono ml-1">[{welcomeSlug}]</span>}.
           </div>
         )}
 
-        <IcyCard>
+        <IcyCard className="hard-shadow">
           <IcyCardBody className="p-8">
             {actionData?.error && (
-              <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+              <div className="bevel-sunken mb-5 p-4 text-sm font-mono text-err">
                 {actionData.error}
               </div>
             )}
             {searchParams.get("error") === "no_tenant" && (
-              <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+              <div className="bevel-sunken mb-5 p-4 text-sm font-mono" style={{ color: "var(--warn)" }}>
                 Your account is not linked to a company. Contact your HR admin.
               </div>
             )}
@@ -124,10 +120,10 @@ export default function LoginPage() {
               </Button>
             </Form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
+            <p className="mt-6 text-sm text-ink-2">
               New to Glacia?{" "}
-              <Link to="/signup" className="text-sky-600 font-medium hover:underline">
-                Create company account
+              <Link to="/signup" className="font-mono font-bold text-accent-dark hover:underline uppercase text-xs tracking-wide">
+                Create company →
               </Link>
             </p>
           </IcyCardBody>

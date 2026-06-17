@@ -11,6 +11,10 @@ interface FormFieldProps {
   className?: string;
 }
 
+const labelCls = "eyebrow block mb-1.5";
+const inputCls =
+  "bevel-sunken w-full px-3 py-2.5 text-sm text-ink placeholder:text-muted bg-surface-2 focus:outline-none focus:border-accent";
+
 export function FormField({
   label,
   name,
@@ -24,10 +28,10 @@ export function FormField({
   className = "",
 }: FormFieldProps) {
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <label htmlFor={name} className="block text-sm font-medium text-slate-700">
+    <div className={className}>
+      <label htmlFor={name} className={labelCls}>
         {label}
-        {required && <span className="text-sky-500 ml-0.5">*</span>}
+        {required && <span className="text-accent-dark ml-1">*</span>}
       </label>
       <input
         id={name}
@@ -37,16 +41,11 @@ export function FormField({
         required={required}
         defaultValue={defaultValue}
         autoComplete={autoComplete}
-        className={`
-          w-full px-4 py-2.5 rounded-xl border text-slate-800 text-sm
-          bg-white/80 placeholder-slate-400
-          focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus:border-sky-400
-          transition-all
-          ${error ? "border-red-300 bg-red-50/40" : "border-sky-200"}
-        `}
+        style={error ? { borderColor: "var(--err)" } : undefined}
+        className={inputCls}
       />
-      {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+      {error && <p className="mt-1.5 text-xs font-mono text-err">{error}</p>}
     </div>
   );
 }
@@ -63,28 +62,24 @@ interface SelectFieldProps {
 
 export function SelectField({ label, name, options, defaultValue, required, error, className = "" }: SelectFieldProps) {
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <label htmlFor={name} className="block text-sm font-medium text-slate-700">
+    <div className={className}>
+      <label htmlFor={name} className={labelCls}>
         {label}
-        {required && <span className="text-sky-500 ml-0.5">*</span>}
+        {required && <span className="text-accent-dark ml-1">*</span>}
       </label>
       <select
         id={name}
         name={name}
         required={required}
         defaultValue={defaultValue}
-        className={`
-          w-full px-4 py-2.5 rounded-xl border text-slate-800 text-sm bg-white/80
-          focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus:border-sky-400
-          transition-all
-          ${error ? "border-red-300" : "border-sky-200"}
-        `}
+        style={error ? { borderColor: "var(--err)" } : undefined}
+        className={inputCls}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-xs font-mono text-err">{error}</p>}
     </div>
   );
 }

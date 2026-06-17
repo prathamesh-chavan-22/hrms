@@ -135,14 +135,13 @@ export default function EmployeesPage() {
   const atCap = totalCount >= plan.maxEmployees;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-5 lg:p-7 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Employees</h1>
-          <p className="text-slate-500 mt-1 text-sm">
-            {totalCount} of {plan.maxEmployees} on {plan.name} plan
-          </p>
+          <p className="eyebrow mb-2">EMPLOYEES</p>
+          <h1 className="display text-3xl text-ink">Team Directory</h1>
+          <p className="eyebrow mt-2 tnum">{totalCount} OF {plan.maxEmployees} ON {plan.name.toUpperCase()} PLAN</p>
         </div>
         <Button
           onClick={() => setShowInviteForm((v) => !v)}
@@ -155,19 +154,18 @@ export default function EmployeesPage() {
 
       {/* Flash messages */}
       {actionData?.success && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+        <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--ok)" }}>
           {actionData.success}
         </div>
       )}
       {actionData?.error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+        <div className="bevel-sunken p-4 text-sm font-mono text-err">
           {actionData.error}
         </div>
       )}
       {atCap && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
-          You have reached your {plan.name} plan limit of {plan.maxEmployees} employees.{" "}
-          <span className="font-medium">Upgrade coming soon via Razorpay.</span>
+        <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--warn)" }}>
+          You have reached your {plan.name} plan limit of {plan.maxEmployees} employees. Upgrade coming soon via Razorpay.
         </div>
       )}
 
@@ -175,7 +173,7 @@ export default function EmployeesPage() {
       {showInviteForm && (
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="text-base font-semibold text-slate-800">Send Invite</h2>
+            <h2 className="eyebrow">SEND INVITE</h2>
           </IcyCardHeader>
           <IcyCardBody>
             <Form method="post" className="flex flex-col sm:flex-row gap-4 items-end">
@@ -211,16 +209,16 @@ export default function EmployeesPage() {
       {pendingInvites.length > 0 && (
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="text-base font-semibold text-slate-800">Pending Invites ({pendingInvites.length})</h2>
+            <h2 className="eyebrow tnum">PENDING INVITES ({pendingInvites.length})</h2>
           </IcyCardHeader>
           <IcyCardBody className="p-0">
-            <ul className="divide-y divide-sky-50">
+            <ul>
               {pendingInvites.map((inv) => (
-                <li key={inv.id} className="px-6 py-3.5 flex items-center justify-between">
+                <li key={inv.id} className="px-5 py-3 flex items-center justify-between rule-dashed first:border-t-0">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{inv.email}</p>
-                    <p className="text-xs text-slate-400">
-                      Expires {new Date(inv.expires_at).toLocaleDateString("en-IN")}
+                    <p className="text-sm font-bold text-ink">{inv.email}</p>
+                    <p className="eyebrow mt-0.5">
+                      EXPIRES {new Date(inv.expires_at).toLocaleDateString("en-IN")}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -237,64 +235,62 @@ export default function EmployeesPage() {
       {/* Employee table */}
       <IcyCard>
         <IcyCardHeader>
-          <h2 className="text-base font-semibold text-slate-800">All Employees</h2>
+          <h2 className="eyebrow">ALL EMPLOYEES</h2>
         </IcyCardHeader>
         <div className="overflow-x-auto">
           {employees.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-4xl mb-3">👥</p>
-              <p className="text-slate-500">No employees yet. Invite your first team member!</p>
+              <p className="text-ink-2">No employees yet. Invite your first team member.</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sky-100">
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Department</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Joined</th>
-                  <th className="px-6 py-3"></th>
+                <tr className="panel-header">
+                  <th className="text-left px-5 py-2.5 eyebrow">Name</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Role</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Department</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Status</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Joined</th>
+                  <th className="px-5 py-2.5"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sky-50">
+              <tbody>
                 {employees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-sky-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={emp.id} className="rule-dashed hover:bg-surface-2 transition-colors">
+                    <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-xs font-bold flex-shrink-0">
+                        <div className="bevel-accent w-8 h-8 flex items-center justify-center text-xs font-mono font-bold flex-shrink-0 !shadow-none">
                           {emp.full_name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-slate-800">{emp.full_name}</p>
-                          <p className="text-xs text-slate-400">{emp.email}</p>
+                          <p className="font-bold text-ink">{emp.full_name}</p>
+                          <p className="eyebrow mt-0.5 normal-case tracking-normal lowercase">{emp.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <Badge {...roleBadge(emp.role)} size="sm">{emp.role}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{emp.department ?? "—"}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3 text-ink-2">{emp.department ?? "—"}</td>
+                    <td className="px-5 py-3">
                       <Badge {...statusBadge(emp.status)} size="sm">{emp.status}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 text-xs">
+                    <td className="px-5 py-3 text-muted text-xs font-mono tnum">
                       {emp.date_of_joining
                         ? new Date(emp.date_of_joining).toLocaleDateString("en-IN")
                         : new Date(emp.created_at).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       {emp.id !== profile.id && (
                         <Form method="post">
                           <input type="hidden" name="userId" value={emp.id} />
                           <input type="hidden" name="intent" value={emp.status === "active" ? "deactivate" : "activate"} />
                           <button
                             type="submit"
-                            className={`text-xs font-medium hover:underline ${
-                              emp.status === "active" ? "text-red-500" : "text-emerald-600"
-                            }`}
+                            className="eyebrow hover:underline"
+                            style={{ color: emp.status === "active" ? "var(--err)" : "var(--ok)" }}
                           >
-                            {emp.status === "active" ? "Deactivate" : "Activate"}
+                            {emp.status === "active" ? "DEACTIVATE" : "ACTIVATE"}
                           </button>
                         </Form>
                       )}

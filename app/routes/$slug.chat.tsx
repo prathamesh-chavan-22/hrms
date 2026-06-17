@@ -109,7 +109,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       from: "bot",
-      text: `Hello ${profile.full_name.split(" ")[0]}! 👋 I'm the Glacia Assistant. Ask me about leave, holidays, or attendance.`,
+      text: `Hello ${profile.full_name.split(" ")[0]}. I'm the Glacia Assistant. Ask me about leave, holidays, or attendance.`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -137,30 +137,31 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 h-full flex flex-col space-y-4 max-w-2xl">
+    <div className="p-5 lg:p-7 h-full flex flex-col space-y-4 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Glacia Assistant</h1>
-        <p className="text-slate-500 mt-1 text-sm">Ask about leave, attendance, holidays and more</p>
+        <p className="eyebrow mb-2">ASSISTANT</p>
+        <h1 className="display text-3xl text-ink">Glacia Assistant</h1>
       </div>
 
-      <div
-        className="flex-1 flex flex-col bg-white/60 backdrop-blur-md border border-sky-100 rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(14,165,233,0.08)]"
-        style={{ minHeight: 480 }}
-      >
+      <div className="bevel hard-shadow flex-1 flex flex-col overflow-hidden" style={{ minHeight: 480 }}>
+        {/* Title strip */}
+        <div className="panel-header flex items-center gap-2 px-4 py-2">
+          <span className="chip chip-accent">BOT</span>
+          <span className="eyebrow">RULE-BASED · NO LLM</span>
+        </div>
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
               {msg.from === "bot" && (
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                  ❄
-                </div>
+                <div className="bevel-accent w-7 h-7 flex items-center justify-center text-[10px] font-mono font-bold mr-2 flex-shrink-0 mt-1 !shadow-none">AI</div>
               )}
               <div
-                className={`max-w-xs sm:max-w-sm px-4 py-2.5 rounded-2xl text-sm ${
+                className={`max-w-xs sm:max-w-sm px-3.5 py-2.5 text-sm border-2 border-rule ${
                   msg.from === "user"
-                    ? "bg-gradient-to-r from-sky-500 to-cyan-500 text-white rounded-br-sm"
-                    : "bg-white border border-sky-100 text-slate-700 rounded-bl-sm"
+                    ? "bevel-accent !shadow-none"
+                    : "bg-surface text-ink"
                 }`}
               >
                 {msg.text}
@@ -169,14 +170,12 @@ export default function ChatPage() {
           ))}
           {isSubmitting && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0">
-                ❄
-              </div>
-              <div className="bg-white border border-sky-100 rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="bevel-accent w-7 h-7 flex items-center justify-center text-[10px] font-mono font-bold mr-2 flex-shrink-0 !shadow-none">AI</div>
+              <div className="bg-surface border-2 border-rule px-3.5 py-3">
                 <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="w-1.5 h-1.5 bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             </div>
@@ -185,27 +184,24 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-sky-100 p-4">
-          <Form method="post" onSubmit={handleSubmit} className="flex gap-3">
+        <div className="border-t-2 border-rule p-3">
+          <Form method="post" onSubmit={handleSubmit} className="flex gap-2">
             <input
               name="message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about leave, holidays, attendance…"
               autoComplete="off"
-              className="flex-1 px-4 py-2.5 rounded-xl border border-sky-200 bg-white/80 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus:border-sky-400 transition-all"
+              className="bevel-sunken flex-1 px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:border-accent"
             />
             <button
               type="submit"
               disabled={!input.trim() || isSubmitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 text-white rounded-xl font-semibold text-sm disabled:opacity-50 hover:from-sky-500 hover:to-cyan-600 transition-all"
+              className="bevel-accent bevel-press px-5 py-2.5 font-mono font-bold uppercase tracking-[0.08em] text-xs disabled:opacity-45"
             >
               Send
             </button>
           </Form>
-          <p className="mt-2 text-center text-xs text-slate-300">
-            Rule-based assistant — no AI/LLM used
-          </p>
         </div>
       </div>
     </div>

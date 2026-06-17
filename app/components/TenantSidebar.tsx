@@ -12,7 +12,7 @@ interface NavItem {
 
 function NavIcon({ path }: { path: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 flex-shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="square" strokeLinejoin="miter" className="w-4 h-4 flex-shrink-0">
       <path d={path} />
     </svg>
   );
@@ -49,84 +49,71 @@ export function TenantSidebar({ tenant, profile, slug }: TenantSidebarProps) {
     ] : []),
   ];
 
-  const accentColor = tenant.theme?.accent ?? "#38bdf8";
-
   return (
-    <aside className="w-64 min-h-screen bg-white/70 backdrop-blur-lg border-r border-sky-100 flex flex-col">
+    <aside className="w-60 min-h-screen bg-surface border-r-2 border-rule flex flex-col">
       {/* Logo + company */}
-      <div className="px-5 py-5 border-b border-sky-50">
+      <div className="panel-header px-4 py-4">
         {tenant.logo_url ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <img
               src={tenant.logo_url}
               alt={tenant.name}
-              className="w-9 h-9 rounded-xl object-contain border border-sky-100 bg-white p-0.5"
+              className="w-9 h-9 object-contain bevel bg-surface p-0.5"
             />
-            <div>
-              <p className="text-sm font-bold text-slate-800 truncate max-w-[140px]">{tenant.name}</p>
-              <p className="text-xs text-slate-400">/{slug}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-ink truncate max-w-[140px]">{tenant.name}</p>
+              <p className="eyebrow mt-0.5">/{slug}</p>
             </div>
           </div>
         ) : (
           <div>
             <GlaciaLogo size="sm" />
-            <p className="mt-1 text-xs font-semibold text-slate-700 truncate">{tenant.name}</p>
-            <p className="text-xs text-slate-400">/{slug}</p>
+            <p className="mt-2 text-xs font-bold text-ink truncate">{tenant.name}</p>
+            <p className="eyebrow mt-0.5">/{slug}</p>
           </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 px-2.5 py-3 space-y-1">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group
+              `flex items-center gap-2.5 px-2.5 py-2 text-xs font-mono font-bold uppercase tracking-[0.06em] transition-transform duration-75
               ${isActive
-                ? "bg-sky-100 text-sky-700 shadow-sm"
-                : "text-slate-600 hover:bg-sky-50 hover:text-sky-700"
+                ? "bevel-accent"
+                : "text-ink-2 border-2 border-transparent hover:border-rule hover:bg-surface-2"
               }
-              ${item.phase2 ? "opacity-60" : ""}`
+              ${item.phase2 ? "opacity-55" : ""}`
             }
           >
             {item.icon}
             <span>{item.label}</span>
-            {item.phase2 && (
-              <span className="ml-auto text-xs bg-sky-100 text-sky-500 px-1.5 py-0.5 rounded-md font-normal">
-                Soon
-              </span>
-            )}
-            {item.hrOnly && !item.phase2 && (
-              <span className="ml-auto text-xs bg-violet-100 text-violet-500 px-1.5 py-0.5 rounded-md font-normal">
-                HR
-              </span>
-            )}
+            {item.phase2 && <span className="ml-auto eyebrow">SOON</span>}
+            {item.hrOnly && !item.phase2 && <span className="ml-auto eyebrow">HR</span>}
           </NavLink>
         ))}
       </nav>
 
       {/* User + logout */}
-      <div className="px-4 py-4 border-t border-sky-50">
-        <div className="flex items-center gap-3 mb-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-            style={{ backgroundColor: accentColor }}
-          >
+      <div className="px-3 py-3 border-t-2 border-rule">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="bevel-accent w-8 h-8 flex items-center justify-center text-xs font-mono font-bold flex-shrink-0">
             {profile.full_name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-800 truncate">{profile.full_name}</p>
-            <p className="text-xs text-slate-400 capitalize">{profile.role}</p>
+            <p className="text-xs font-bold text-ink truncate">{profile.full_name}</p>
+            <p className="eyebrow mt-0.5">{profile.role}</p>
           </div>
         </div>
         <Form action="/logout" method="post">
           <button
             type="submit"
-            className="w-full text-left text-xs text-slate-500 hover:text-red-500 transition-colors px-1"
+            className="w-full text-left eyebrow hover:text-err transition-colors px-0.5"
           >
-            Sign out
+            → SIGN OUT
           </button>
         </Form>
       </div>

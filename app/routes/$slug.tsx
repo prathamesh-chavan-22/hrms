@@ -25,7 +25,7 @@ export default function TenantLayout() {
 
   return (
     <div
-      className="flex min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50"
+      className="flex min-h-screen bg-bg"
       style={{
         ["--tenant-accent" as string]: accentColor,
         ["--tenant-accent-dark" as string]: accentDark,
