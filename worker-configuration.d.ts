@@ -6,7 +6,6 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./workers/app");
 	}
 	interface Env {
-		VALUE_FROM_CLOUDFLARE: "Hello from Cloudflare";
 		SUPABASE_URL: string;
 		SUPABASE_PUBLISHABLE_KEY: string;
 		SUPABASE_SECRET_KEY: string;
@@ -20,7 +19,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "VALUE_FROM_CLOUDFLARE" | "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SECRET_KEY" | "RESEND_API_KEY" | "APP_BASE_URL" | "BILLING_ENABLED">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_SECRET_KEY" | "RESEND_API_KEY" | "APP_BASE_URL" | "BILLING_ENABLED">> {}
 }
 
 // Begin runtime types

@@ -35,11 +35,13 @@
 		"tailwindcss": "4.1.17",
 		"typescript": "5.9.3",
 		"vite": "^7.0.0",
+		"vite-bundle-visualizer": "^1.2.1",
 		"vite-tsconfig-paths": "5.1.4",
 		"wrangler": "4.88.0"
 	},
 	"private": true,
 	"scripts": {
+		"analyze": "vite-bundle-visualizer",
 		"build": "react-router build",
 		"cf-typegen": "wrangler types && react-router typegen",
 		"check": "tsc && react-router build && wrangler deploy --dry-run",

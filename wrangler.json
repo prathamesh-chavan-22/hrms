@@ -9,7 +9,6 @@
 	},
 	"upload_source_maps": true,
 	"vars": {
-		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare",
 		"APP_BASE_URL": "https://glacia.supernovae.me",
 		"BILLING_ENABLED": "false"
 	}

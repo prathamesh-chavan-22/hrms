@@ -8,6 +8,12 @@ export function meta() {
   return [{ title: "Pricing — Glacia HRMS" }];
 }
 
+export function headers() {
+  return {
+    "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+  };
+}
+
 export function loader({ context }: Route.LoaderArgs) {
   return { billingEnabled: context.cloudflare.env.BILLING_ENABLED === "true" };
 }

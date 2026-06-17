@@ -1,109 +1,115 @@
-# Welcome to React Router + Cloudflare Workers!
+# Glacia HRMS
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/react-router-starter-template)
+Multi-tenant HR management for growing teams — GPS attendance, leave policy, team directory, and tenant branding. Built with React Router 7 on Cloudflare Workers and Supabase.
 
-![React Router Starter Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/bfdc2f85-e5c9-4c92-128b-3a6711249800/public)
+## Prerequisites
 
-<!-- dash-content-start -->
+- Node.js 20+
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (included as a dev dependency)
+- A [Supabase](https://supabase.com) project
+- A [Resend](https://resend.com) API key (for invite and welcome emails)
 
-A modern, production-ready template for building full-stack React applications using [React Router](https://reactrouter.com/) and the [Cloudflare Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/).
+## Environment variables
 
-## Features
-
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-- 🔎 Built-in Observability to monitor your Worker
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
+Local development uses [Wrangler `.dev.vars`](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-secrets). Create `.dev.vars` in the project root:
 
 ```bash
-npm create cloudflare@latest -- --template=cloudflare/templates/react-router-starter-template
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+SUPABASE_SECRET_KEY=your_secret_key
+
+# Resend
+RESEND_API_KEY=re_your_resend_api_key
+
+# App
+APP_BASE_URL=http://localhost:5173
+BILLING_ENABLED=false
 ```
 
-A live public deployment of this template is available at [https://react-router-starter-template.templates.workers.dev](https://react-router-starter-template.templates.workers.dev)
+| Variable | Description |
+|----------|-------------|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key |
+| `SUPABASE_SECRET_KEY` | Supabase secret (service role) key — server only |
+| `RESEND_API_KEY` | Resend API key for transactional email |
+| `APP_BASE_URL` | Public base URL for links in emails and redirects |
+| `BILLING_ENABLED` | Set to `true` when Razorpay billing is live; `false` during beta |
 
-### Installation
+Production secrets are set via Wrangler (`wrangler secret put …`) or the Cloudflare dashboard. Non-secret defaults live in `wrangler.json` under `vars`.
 
-Install the dependencies:
+## Database migrations
+
+SQL migrations live in `supabase/migrations/`:
+
+1. `001_initial_schema.sql` — tenants, profiles, attendance, leave, holidays, RLS policies
+2. `002_seed_defaults.sql` — default leave types and national holidays
+3. `003_storage.sql` — logo upload bucket and policies
+
+Apply with the [Supabase CLI](https://supabase.com/docs/guides/cli):
+
+```bash
+supabase link --project-ref your-project-ref
+supabase db push
+```
+
+Or run the migration files manually in the Supabase SQL editor, in order.
+
+## Development
 
 ```bash
 npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+App runs at `http://localhost:5173`. Tenant routes use `/{slug}/dashboard` (e.g. `/acme/dashboard`).
 
-## Typegen
+## Type generation
 
-Generate types for your Cloudflare bindings in `wrangler.json`:
-
-```sh
-npm run typegen
-```
-
-## Building for Production
-
-Create a production build:
+Regenerate Cloudflare binding types and React Router route types:
 
 ```bash
-npm run build
+npm run cf-typegen
 ```
 
-## Previewing the Production Build
-
-Preview the production build locally:
+## Build & deploy
 
 ```bash
-npm run preview
+npm run build          # production build
+npm run preview        # build + local preview
+npm run deploy         # deploy to Cloudflare Workers
+npm run check          # typecheck + build + wrangler dry-run
 ```
 
-## Deployment
+Preview deployments:
 
-If you don't have a Cloudflare account, [create one here](https://dash.cloudflare.com/sign-up)! Go to your [Workers dashboard](https://dash.cloudflare.com/?to=%2F%3Aaccount%2Fworkers-and-pages) to see your [free custom Cloudflare Workers subdomain](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/) on `*.workers.dev`.
-
-Once that's done, you can build your app:
-
-```sh
-npm run build
-```
-
-And deploy it:
-
-```sh
-npm run deploy
-```
-
-To deploy a preview URL:
-
-```sh
+```bash
 npx wrangler versions upload
-```
-
-You can then promote a version to production after verification or roll it out progressively.
-
-```sh
 npx wrangler versions deploy
 ```
 
-## Styling
+## Bundle analysis
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+Inspect client bundle composition:
 
----
+```bash
+npm run analyze
+```
 
-Built with ❤️ using React Router.
+Opens an interactive treemap (`stats.html`) after build. Client chunks are split into `react`, `leaflet`, and `vendor` via `manualChunks` in `vite.config.ts`.
+
+## Project structure
+
+```
+app/
+  routes/          # React Router file-based routes
+  components/      # Shared UI
+  lib/             # Server utilities (auth, Supabase, email, attendance)
+workers/app.ts     # Cloudflare Worker entry
+supabase/migrations/
+wrangler.json      # Worker config and public vars
+```
+
+## License
+
+Private — Supernovae.

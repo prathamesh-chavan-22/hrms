@@ -11,4 +11,22 @@ export default defineConfig({
 		reactRouter(),
 		tsconfigPaths(),
 	],
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (!id.includes("node_modules")) return;
+					if (id.includes("leaflet")) return "leaflet";
+					if (
+						id.includes("react-dom") ||
+						id.includes("react-router") ||
+						/id[/\\]node_modules[/\\]react[/\\]/.test(id)
+					) {
+						return "react";
+					}
+					return "vendor";
+				},
+			},
+		},
+	},
 });

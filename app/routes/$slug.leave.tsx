@@ -1,6 +1,4 @@
-import { useOutletContext } from "react-router";
 import { IcyCard, IcyCardBody } from "~/components/IcyCard";
-import type { Profile, Tenant } from "~/types/app";
 
 export function meta() {
   return [{ title: "Leave — Glacia HRMS" }];
