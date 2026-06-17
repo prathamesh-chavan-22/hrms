@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { todayIST } from "~/lib/dates";
 
 export type DayMarker = {
   date: string; // YYYY-MM-DD
@@ -15,6 +16,7 @@ interface AttendanceCalendarProps {
   initialYear?: number;
   initialMonth?: number; // 1-12
   onDayClick?: (date: string, marker?: DayMarker) => void;
+  onMonthChange?: (year: number, month: number) => void;
   selectedDate?: string | null;
 }
 
@@ -45,16 +47,20 @@ export function AttendanceCalendar({
   initialYear,
   initialMonth,
   onDayClick,
+  onMonthChange,
   selectedDate,
 }: AttendanceCalendarProps) {
   const now = new Date();
   const [viewYear, setViewYear] = useState(initialYear ?? now.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialMonth ?? now.getMonth() + 1);
 
-  const todayStr = (() => {
-    const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-    return ist.toISOString().slice(0, 10);
-  })();
+  // Sync local state when loader provides new year/month after navigation
+  useEffect(() => {
+    if (initialYear != null) setViewYear(initialYear);
+    if (initialMonth != null) setViewMonth(initialMonth);
+  }, [initialYear, initialMonth]);
+
+  const todayStr = todayIST();
 
   // Build marker lookup
   const markerMap = new Map<string, DayMarker>();
@@ -76,12 +82,18 @@ export function AttendanceCalendar({
   while (cells.length % 7 !== 0) cells.push(null);
 
   function prevMonth() {
-    if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12); }
-    else setViewMonth(m => m - 1);
+    const newMonth = viewMonth === 1 ? 12 : viewMonth - 1;
+    const newYear = viewMonth === 1 ? viewYear - 1 : viewYear;
+    setViewYear(newYear);
+    setViewMonth(newMonth);
+    onMonthChange?.(newYear, newMonth);
   }
   function nextMonth() {
-    if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1); }
-    else setViewMonth(m => m + 1);
+    const newMonth = viewMonth === 12 ? 1 : viewMonth + 1;
+    const newYear = viewMonth === 12 ? viewYear + 1 : viewYear;
+    setViewYear(newYear);
+    setViewMonth(newMonth);
+    onMonthChange?.(newYear, newMonth);
   }
 
   function pad(n: number) { return String(n).padStart(2, "0"); }

@@ -1,11 +1,20 @@
 import type { SupabaseClient } from "~/lib/supabase.server";
+import { todayIST } from "~/lib/dates";
+export { todayIST };
 
-// Asia/Kolkata offset is UTC+5:30 = 19800 seconds
-export function todayIST(): string {
-  const now = new Date();
-  // Shift by IST offset then extract YYYY-MM-DD from UTC representation
-  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return ist.toISOString().slice(0, 10);
+export function requireValidCoords(
+  gpsRequired: boolean,
+  lat: number | null,
+  lng: number | null,
+): string | null {
+  if (!gpsRequired) return null;
+  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+    return "GPS location is required for this tenant";
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return "Invalid GPS coordinates";
+  }
+  return null;
 }
 
 export function monthBounds(year: number, month: number): { start: string; end: string } {
@@ -122,6 +131,7 @@ export async function getTeamAttendanceToday(
 export type PunchParams = {
   tenantId: string;
   userId: string;
+  gpsRequired?: boolean;
   lat?: number | null;
   lng?: number | null;
   addr?: string | null;
@@ -131,6 +141,9 @@ export async function punchIn(
   supabase: SupabaseClient,
   params: PunchParams
 ): Promise<{ error?: string }> {
+  const coordError = requireValidCoords(params.gpsRequired ?? false, params.lat ?? null, params.lng ?? null);
+  if (coordError) return { error: coordError };
+
   const today = todayIST();
   const now = new Date().toISOString();
 
@@ -174,6 +187,9 @@ export async function punchOut(
   supabase: SupabaseClient,
   params: PunchParams
 ): Promise<{ error?: string }> {
+  const coordError = requireValidCoords(params.gpsRequired ?? false, params.lat ?? null, params.lng ?? null);
+  if (coordError) return { error: coordError };
+
   const today = todayIST();
   const now = new Date().toISOString();
 

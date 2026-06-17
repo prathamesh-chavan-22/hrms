@@ -14,6 +14,7 @@ import {
   getTeamAttendanceToday,
   punchIn,
   punchOut,
+  requireValidCoords,
   setAttendanceStatus,
   todayIST,
 } from "~/lib/attendance.server";
@@ -61,32 +62,27 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const intent = String(form.get("intent"));
 
-  if (intent === "punch_in") {
-    const lat = parseFloat(String(form.get("lat"))) || null;
-    const lng = parseFloat(String(form.get("lng"))) || null;
+  if (intent === "punch_in" || intent === "punch_out") {
+    const latRaw = parseFloat(String(form.get("lat")));
+    const lngRaw = parseFloat(String(form.get("lng")));
+    const lat = Number.isFinite(latRaw) ? latRaw : null;
+    const lng = Number.isFinite(lngRaw) ? lngRaw : null;
     const addr = String(form.get("addr") || "") || null;
-    const { error } = await punchIn(supabase, {
-      tenantId: tenant.id,
-      userId: profile.id,
-      lat: isNaN(lat as number) ? null : lat,
-      lng: isNaN(lng as number) ? null : lng,
-      addr,
-    });
-    return data({ error: error ?? null, success: error ? null : "Punched in successfully", intent });
-  }
 
-  if (intent === "punch_out") {
-    const lat = parseFloat(String(form.get("lat"))) || null;
-    const lng = parseFloat(String(form.get("lng"))) || null;
-    const addr = String(form.get("addr") || "") || null;
-    const { error } = await punchOut(supabase, {
+    const coordError = requireValidCoords(tenant.gps_required, lat, lng);
+    if (coordError) return data({ error: coordError, success: null, intent });
+
+    const punch = intent === "punch_in" ? punchIn : punchOut;
+    const { error } = await punch(supabase, {
       tenantId: tenant.id,
       userId: profile.id,
-      lat: isNaN(lat as number) ? null : lat,
-      lng: isNaN(lng as number) ? null : lng,
+      gpsRequired: tenant.gps_required,
+      lat,
+      lng,
       addr,
     });
-    return data({ error: error ?? null, success: error ? null : "Punched out successfully", intent });
+    const label = intent === "punch_in" ? "Punched in" : "Punched out";
+    return data({ error: error ?? null, success: error ? null : `${label} successfully`, intent });
   }
 
   if (intent === "set_status") {
@@ -369,6 +365,7 @@ export default function AttendancePage() {
             initialMonth={calMonth}
             selectedDate={selectedDate}
             onDayClick={(date) => setSelectedDate(date === selectedDate ? null : date)}
+            onMonthChange={handleMonthNav}
           />
         </div>
 

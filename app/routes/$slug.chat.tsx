@@ -4,6 +4,7 @@ import { requireTenantAccess } from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { Profile, Tenant, ChatbotIntent } from "~/types/app";
 import { useState, useRef, useEffect } from "react";
+import { todayIST } from "~/lib/dates";
 
 export function meta() {
   return [{ title: "Assistant — Glacia HRMS" }];
@@ -64,7 +65,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
         .from("holidays")
         .select("name, date")
         .eq("tenant_id", tenant.id)
-        .gte("date", new Date().toISOString().slice(0, 10))
+        .gte("date", todayIST())
         .order("date")
         .limit(5);
       const list = (holidays ?? [])
@@ -72,7 +73,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
         .join("; ");
       reply = `Upcoming holidays: ${list || "None scheduled."}`;
     } else if (intent.query_type === "attendance_today") {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayIST();
       const { data: att } = await supabase
         .from("attendance")
         .select("punch_in_at, punch_out_at")
