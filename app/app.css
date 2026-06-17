@@ -1,16 +1,156 @@
-@import "tailwindcss" source(".");
+@import "tailwindcss";
 
 @theme {
-	--font-sans:
-		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* ── Glacia Icy Palette ─────────────────────────────────── */
+
+  /* Glacier blues */
+  --color-glacier-50:  #f0f9ff;
+  --color-glacier-100: #e0f2fe;
+  --color-glacier-200: #bae6fd;
+  --color-glacier-300: #7dd3fc;
+  --color-glacier-400: #38bdf8;
+  --color-glacier-500: #0ea5e9;
+  --color-glacier-600: #0284c7;
+  --color-glacier-700: #0369a1;
+  --color-glacier-800: #075985;
+  --color-glacier-900: #0c4a6e;
+
+  /* Frost whites / cyans */
+  --color-frost-50:  #ecfeff;
+  --color-frost-100: #cffafe;
+  --color-frost-200: #a5f3fc;
+  --color-frost-300: #67e8f9;
+  --color-frost-400: #22d3ee;
+  --color-frost-500: #06b6d4;
+  --color-frost-600: #0891b2;
+  --color-frost-700: #0e7490;
+  --color-frost-800: #155e75;
+  --color-frost-900: #164e63;
+
+  /* Ice neutrals */
+  --color-ice-50:  #f8fafc;
+  --color-ice-100: #f1f5f9;
+  --color-ice-200: #e2e8f0;
+  --color-ice-300: #cbd5e1;
+  --color-ice-400: #94a3b8;
+  --color-ice-500: #64748b;
+  --color-ice-600: #475569;
+  --color-ice-700: #334155;
+  --color-ice-800: #1e293b;
+  --color-ice-900: #0f172a;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Radius */
+  --radius-xl:  12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+
+  /* Shadows */
+  --shadow-icy: 0 4px 24px rgba(14, 165, 233, 0.08);
+  --shadow-icy-lg: 0 8px 40px rgba(14, 165, 233, 0.15);
+  --shadow-icy-xl: 0 20px 60px rgba(14, 165, 233, 0.20);
 }
 
-html,
-body {
-	@apply bg-white dark:bg-gray-950;
+/* ── Global Resets ──────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
-	@media (prefers-color-scheme: dark) {
-		color-scheme: dark;
-	}
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ice-800);
+  background: var(--color-glacier-50);
+}
+
+/* ── Frosted Glass Utility ──────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(14, 165, 233, 0.12);
+}
+
+.glass-dark {
+  background: rgba(12, 74, 110, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+/* ── Gradient Utilities ──────────────────────────────────── */
+.gradient-glacier {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #06b6d4 100%);
+}
+
+.gradient-frost {
+  background: linear-gradient(135deg, #bae6fd 0%, #a5f3fc 100%);
+}
+
+.text-gradient-glacier {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Icy Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-glacier-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-glacier-300);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-glacier-400);
+}
+
+/* ── Focus ring ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-glacier-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Tenant accent CSS variable overrides ────────────────── */
+:root {
+  --tenant-accent: #38bdf8;
+  --tenant-accent-dark: #0ea5e9;
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f9ff 25%, #e0f2fe 50%, #f0f9ff 75%);
+  background-size: 200% auto;
+  animation: shimmer 1.5s linear infinite;
+}
+
+/* ── Page transition ────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeSlideUp 0.25s ease-out;
 }

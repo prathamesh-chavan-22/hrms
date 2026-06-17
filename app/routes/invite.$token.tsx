@@ -1,0 +1,132 @@
+import { data, redirect, Form, useLoaderData, useActionData, useNavigation, Link } from "react-router";
+import type { Route } from "./+types/invite.$token";
+import { getInviteByToken, acceptInvite } from "~/lib/auth.server";
+import { GlaciaLogo } from "~/components/GlaciaLogo";
+import { FormField } from "~/components/FormField";
+import { Button } from "~/components/Button";
+import { IcyCard, IcyCardBody } from "~/components/IcyCard";
+
+export function meta() {
+  return [{ title: "Accept Invitation — Glacia HRMS" }];
+}
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const invite = await getInviteByToken(context.cloudflare.env, params.token);
+  if (!invite) {
+    return data({ invalid: true, invite: null }, { status: 200 });
+  }
+  return { invalid: false, invite };
+}
+
+export async function action({ params, request, context }: Route.ActionArgs) {
+  const env = context.cloudflare.env;
+  const form = await request.formData();
+  const fullName = String(form.get("fullName") ?? "").trim();
+  const password = String(form.get("password") ?? "");
+  const confirmPassword = String(form.get("confirmPassword") ?? "");
+
+  const errors: Record<string, string> = {};
+  if (!fullName) errors.fullName = "Full name is required";
+  if (password.length < 8) errors.password = "Password must be at least 8 characters";
+  if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match";
+
+  if (Object.keys(errors).length > 0) {
+    return data({ errors }, { status: 400 });
+  }
+
+  const result = await acceptInvite(env, params.token, { fullName, password });
+  if (result.error) {
+    return data({ errors: { form: result.error } }, { status: 400 });
+  }
+
+  return redirect(`/login?welcome=1`);
+}
+
+export default function InvitePage() {
+  const { invalid, invite } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const errors = actionData?.errors ?? {};
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 flex items-center justify-center p-4">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-sky-200/30 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-cyan-200/30 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-block">
+            <GlaciaLogo size="lg" />
+          </Link>
+        </div>
+
+        {invalid ? (
+          <IcyCard>
+            <IcyCardBody className="p-8 text-center">
+              <div className="text-4xl mb-4">❄️</div>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Invalid or Expired Invite</h2>
+              <p className="text-slate-500 text-sm mb-6">
+                This invitation link has expired or already been used. Ask your HR admin to send a new invite.
+              </p>
+              <Link to="/login" className="text-sky-600 font-medium hover:underline text-sm">
+                Go to Sign In
+              </Link>
+            </IcyCardBody>
+          </IcyCard>
+        ) : (
+          <IcyCard>
+            <IcyCardBody className="p-8">
+              <div className="mb-6">
+                <p className="text-sm text-slate-500 mb-1">You're invited to join</p>
+                <h2 className="text-xl font-bold text-slate-800">
+                  {(invite as { tenant: { name: string } }).tenant?.name}
+                </h2>
+                <p className="text-sm text-sky-600 mt-1">{invite?.email}</p>
+              </div>
+
+              {errors.form && (
+                <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                  {errors.form}
+                </div>
+              )}
+
+              <Form method="post" className="space-y-5">
+                <FormField
+                  label="Full Name"
+                  name="fullName"
+                  placeholder="Your full name"
+                  required
+                  error={errors.fullName}
+                />
+                <FormField
+                  label="Password"
+                  name="password"
+                  type="password"
+                  placeholder="Min. 8 characters"
+                  required
+                  error={errors.password}
+                  autoComplete="new-password"
+                />
+                <FormField
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Repeat password"
+                  required
+                  error={errors.confirmPassword}
+                  autoComplete="new-password"
+                />
+                <Button type="submit" fullWidth loading={isSubmitting} size="lg">
+                  Accept & Create Account
+                </Button>
+              </Form>
+            </IcyCardBody>
+          </IcyCard>
+        )}
+      </div>
+    </div>
+  );
+}
