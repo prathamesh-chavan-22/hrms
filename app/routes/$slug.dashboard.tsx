@@ -13,6 +13,8 @@ import {
   todayIST,
 } from "~/lib/attendance.server";
 import type { DayMarker } from "~/components/AttendanceCalendar";
+import { fmtTime, durHours } from "~/lib/format";
+import { isHR } from "~/lib/roles";
 
 export function meta() {
   return [{ title: "Dashboard — Glacia HRMS" }];
@@ -86,19 +88,6 @@ function StatCard({ label, value, sub, tag }: StatCardProps) {
   );
 }
 
-function fmt(ts: string | null) {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
-
-function durHours(a: string | null, b: string | null): string {
-  if (!a || !b) return "";
-  const ms = new Date(b).getTime() - new Date(a).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${h}h ${m}m`;
-}
-
 export default function DashboardPage() {
   const { profile, tenant } = useOutletContext<TenantOutletContext>();
   const {
@@ -113,7 +102,7 @@ export default function DashboardPage() {
   } = useLoaderData<typeof loader>();
 
   const plan = getPlan(tenant.plan);
-  const isHR = ["owner", "hr", "admin"].includes(profile.role);
+  const hrUser = isHR(profile.role);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
 
@@ -151,8 +140,8 @@ export default function DashboardPage() {
 
   function todayStatusText() {
     if (!punchedIn) return null;
-    if (!punchedOut) return `IN ${fmt(todayRecord!.punch_in_at)} — NOT OUT YET`;
-    return `${fmt(todayRecord!.punch_in_at)} → ${fmt(todayRecord!.punch_out_at)}  ·  ${durHours(todayRecord!.punch_in_at, todayRecord!.punch_out_at)}`;
+    if (!punchedOut) return `IN ${fmtTime(todayRecord!.punch_in_at)} — NOT OUT YET`;
+    return `${fmtTime(todayRecord!.punch_in_at)} → ${fmtTime(todayRecord!.punch_out_at)}  ·  ${durHours(todayRecord!.punch_in_at, todayRecord!.punch_out_at)}`;
   }
 
   return (
@@ -289,14 +278,14 @@ export default function DashboardPage() {
                   <dl className="space-y-2 text-sm">
                     <div>
                       <dt className="eyebrow">PUNCH IN</dt>
-                      <dd className="text-ink tnum font-mono mt-0.5">{fmt(selectedMarker.punch_in_at ?? null)}</dd>
+                      <dd className="text-ink tnum font-mono mt-0.5">{fmtTime(selectedMarker.punch_in_at ?? null)}</dd>
                       {selectedMarker.punch_in_addr && (
                         <dd className="text-ink-2 text-xs mt-0.5 truncate font-mono">{selectedMarker.punch_in_addr}</dd>
                       )}
                     </div>
                     <div>
                       <dt className="eyebrow">PUNCH OUT</dt>
-                      <dd className="text-ink tnum font-mono mt-0.5">{fmt(selectedMarker.punch_out_at ?? null)}</dd>
+                      <dd className="text-ink tnum font-mono mt-0.5">{fmtTime(selectedMarker.punch_out_at ?? null)}</dd>
                       {selectedMarker.punch_out_addr && (
                         <dd className="text-ink-2 text-xs mt-0.5 truncate font-mono">{selectedMarker.punch_out_addr}</dd>
                       )}
@@ -319,7 +308,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent Employees (HR only) */}
-        {isHR && (
+        {hrUser && (
           <IcyCard>
             <IcyCardHeader>
               <h2 className="eyebrow">RECENT TEAM MEMBERS</h2>

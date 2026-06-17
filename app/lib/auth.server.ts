@@ -1,6 +1,8 @@
 import { redirect } from "react-router";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "./supabase.server";
 import type { Profile, Tenant } from "~/types/app";
+import { isHR } from "~/lib/roles";
+import { canAddEmployee } from "~/lib/plans";
 
 export async function getSession(request: Request, env: Env) {
   const { supabase, cookies } = createSupabaseServerClient(request, env);
@@ -52,7 +54,7 @@ export async function requireTenantAccess(
 
 export async function requireHR(request: Request, env: Env, slug: string) {
   const result = await requireTenantAccess(request, env, slug);
-  if (!["owner", "hr", "admin"].includes(result.profile.role)) {
+  if (!isHR(result.profile.role)) {
     throw redirect(`/${slug}/dashboard`);
   }
   return result;
@@ -160,7 +162,7 @@ export async function getInviteByToken(env: Env, token: string) {
   const service = createSupabaseServiceClient(env);
   const { data } = await service
     .from("invites")
-    .select("*, tenant:tenants(slug, name)")
+    .select("*, tenant:tenants(slug, name, plan)")
     .eq("token", token)
     .is("accepted_at", null)
     .gt("expires_at", new Date().toISOString())
@@ -178,6 +180,16 @@ export async function acceptInvite(
   const invite = await getInviteByToken(env, token);
   if (!invite) return { error: "Invalid or expired invite link" };
 
+  // Enforce plan cap at acceptance time to handle queued-invite bypass.
+  const tenantPlan = (invite.tenant as { plan: string } | null)?.plan ?? "starter";
+  const { count } = await service
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", invite.tenant_id);
+  if (!canAddEmployee(tenantPlan, count ?? 0)) {
+    return { error: "This company has reached its plan limit. Contact the HR admin." };
+  }
+
   const { data: authData, error: authError } = await service.auth.admin.createUser({
     email: invite.email,
     password: params.password,
@@ -189,7 +201,7 @@ export async function acceptInvite(
     return { error: authError?.message ?? "Failed to create account" };
   }
 
-  await service.from("profiles").insert({
+  const { error: profileError } = await service.from("profiles").insert({
     id: authData.user.id,
     tenant_id: invite.tenant_id,
     role: invite.role,
@@ -198,10 +210,19 @@ export async function acceptInvite(
     status: "active",
   });
 
-  await service
+  if (profileError) {
+    await service.auth.admin.deleteUser(authData.user.id);
+    return { error: profileError.message };
+  }
+
+  const { error: inviteError } = await service
     .from("invites")
     .update({ accepted_at: new Date().toISOString() })
     .eq("token", token);
+
+  if (inviteError) {
+    console.error("[acceptInvite] Failed to mark invite accepted:", inviteError);
+  }
 
   return { success: true, email: invite.email };
 }

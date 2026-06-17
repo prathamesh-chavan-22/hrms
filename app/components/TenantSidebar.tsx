@@ -1,6 +1,7 @@
 import { NavLink, Form } from "react-router";
 import type { Tenant, Profile } from "~/types/app";
 import { GlaciaLogo } from "./GlaciaLogo";
+import { isHR } from "~/lib/roles";
 
 interface NavItem {
   to: string;
@@ -35,7 +36,7 @@ interface TenantSidebarProps {
 }
 
 export function TenantSidebar({ tenant, profile, slug }: TenantSidebarProps) {
-  const isHR = ["owner", "hr", "admin"].includes(profile.role);
+  const hrUser = isHR(profile.role);
 
   const navItems: NavItem[] = [
     { to: `/${slug}/dashboard`, label: "Dashboard", icon: <NavIcon path={ICONS.dashboard} /> },
@@ -43,7 +44,7 @@ export function TenantSidebar({ tenant, profile, slug }: TenantSidebarProps) {
     { to: `/${slug}/leave`, label: "Leave", icon: <NavIcon path={ICONS.leave} />, phase2: true },
     { to: `/${slug}/holidays`, label: "Holidays", icon: <NavIcon path={ICONS.holidays} />, phase2: true },
     { to: `/${slug}/chat`, label: "Assistant", icon: <NavIcon path={ICONS.chat} />, phase2: true },
-    ...(isHR ? [
+    ...(hrUser ? [
       { to: `/${slug}/employees`, label: "Employees", icon: <NavIcon path={ICONS.employees} />, hrOnly: true },
       { to: `/${slug}/settings`, label: "Settings", icon: <NavIcon path={ICONS.settings} />, hrOnly: true },
     ] : []),

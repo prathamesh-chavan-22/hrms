@@ -1,7 +1,7 @@
 import { data, redirect, Form, useLoaderData, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.employees";
 import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
-import { createSupabaseServiceClient } from "~/lib/supabase.server";
+import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { TenantOutletContext } from "./$slug";
 import { sendInviteEmail } from "~/lib/email.server";
 import { canAddEmployee, getPlan } from "~/lib/plans";
@@ -9,6 +9,8 @@ import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Badge, roleBadge, statusBadge } from "~/components/Badge";
 import { Button } from "~/components/Button";
 import { FormField, SelectField } from "~/components/FormField";
+import { FlashMessage } from "~/components/FlashMessage";
+import { isHR } from "~/lib/roles";
 import type { Profile } from "~/types/app";
 import { useState } from "react";
 
@@ -21,7 +23,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;
   const { tenantId, role, supabase } = await requireChildLoaderAuth(request, env);
 
-  if (!["owner", "hr", "admin"].includes(role)) {
+  if (!isHR(role)) {
     throw redirect(`/${slug}/dashboard`);
   }
 
@@ -54,6 +56,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const slug = params.slug!;
   const env = context.cloudflare.env;
   const { profile, tenant } = await requireHR(request, env, slug);
+  const { supabase } = createSupabaseServerClient(request, env);
   const form = await request.formData();
   const intent = String(form.get("intent"));
 
@@ -63,8 +66,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
     if (!email) return data({ error: "Email is required", intent, success: null }, { status: 400 });
 
-    const service = createSupabaseServiceClient(env);
-    const { count } = await service
+    const { count } = await supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id);
@@ -78,7 +80,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       }, { status: 400 });
     }
 
-    const { data: existing } = await service
+    const { data: existing } = await supabase
       .from("profiles")
       .select("id")
       .eq("tenant_id", tenant.id)
@@ -87,7 +89,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
     if (existing) return data({ error: "This email is already a team member", intent, success: null }, { status: 400 });
 
-    const { data: invite, error: inviteError } = await service
+    const { data: invite, error: inviteError } = await supabase
       .from("invites")
       .insert({ tenant_id: tenant.id, email, role, invited_by: profile.id })
       .select()
@@ -111,15 +113,15 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   if (intent === "deactivate") {
     const userId = String(form.get("userId"));
     if (userId === profile.id) return data({ error: "Cannot deactivate yourself", intent, success: null }, { status: 400 });
-    const service = createSupabaseServiceClient(env);
-    await service.from("profiles").update({ status: "inactive" }).eq("id", userId).eq("tenant_id", tenant.id);
+    const { error } = await supabase.from("profiles").update({ status: "inactive" }).eq("id", userId).eq("tenant_id", tenant.id);
+    if (error) return data({ error: error.message, intent, success: null }, { status: 500 });
     return data({ success: "Employee deactivated", intent, error: null });
   }
 
   if (intent === "activate") {
     const userId = String(form.get("userId"));
-    const service = createSupabaseServiceClient(env);
-    await service.from("profiles").update({ status: "active" }).eq("id", userId).eq("tenant_id", tenant.id);
+    const { error } = await supabase.from("profiles").update({ status: "active" }).eq("id", userId).eq("tenant_id", tenant.id);
+    if (error) return data({ error: error.message, intent, success: null }, { status: 500 });
     return data({ success: "Employee activated", intent, error: null });
   }
 
@@ -156,16 +158,8 @@ export default function EmployeesPage() {
       </div>
 
       {/* Flash messages */}
-      {actionData?.success && (
-        <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--ok)" }}>
-          {actionData.success}
-        </div>
-      )}
-      {actionData?.error && (
-        <div className="bevel-sunken p-4 text-sm font-mono text-err">
-          {actionData.error}
-        </div>
-      )}
+      <FlashMessage message={actionData?.success} variant="success" />
+      <FlashMessage message={actionData?.error} variant="error" />
       {atCap && (
         <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--warn)" }}>
           You have reached your {plan.name} plan limit of {plan.maxEmployees} employees. Upgrade coming soon via Razorpay.

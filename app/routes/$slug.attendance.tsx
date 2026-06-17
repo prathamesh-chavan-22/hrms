@@ -20,6 +20,9 @@ import {
   todayIST,
 } from "~/lib/attendance.server";
 import type { DayMarker } from "~/components/AttendanceCalendar";
+import { fmtTime, durHours } from "~/lib/format";
+import { isHR } from "~/lib/roles";
+import { FlashMessage } from "~/components/FlashMessage";
 
 export function meta() {
   return [{ title: "Attendance — Glacia HRMS" }];
@@ -32,12 +35,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const qYear = parseInt(url.searchParams.get("year") ?? "") || new Date().getFullYear();
   const qMonth = parseInt(url.searchParams.get("month") ?? "") || new Date().getMonth() + 1;
-  const isHR = ["owner", "hr", "admin"].includes(role);
+  const hrUser = isHR(role);
 
   const [monthAttendance, todayRecord, teamToday] = await Promise.all([
     getMonthAttendance(supabase, tenantId, userId, qYear, qMonth),
     getTodayAttendance(supabase, tenantId, userId),
-    isHR ? getTeamAttendanceToday(supabase, tenantId) : Promise.resolve([]),
+    hrUser ? getTeamAttendanceToday(supabase, tenantId) : Promise.resolve([]),
   ]);
 
   return data({
@@ -47,7 +50,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     calYear: qYear,
     calMonth: qMonth,
     today: todayIST(),
-    isHR,
+    isHR: hrUser,
   });
 }
 
@@ -83,13 +86,22 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
 
   if (intent === "set_status") {
-    const isHR = ["owner", "hr", "admin"].includes(profile.role);
-    if (!isHR) return data({ error: "Unauthorized", success: null, intent }, { status: 403 });
+    if (!isHR(profile.role)) return data({ error: "Unauthorized", success: null, intent }, { status: 403 });
 
     const userId = String(form.get("user_id"));
     const date = String(form.get("date"));
     const status = String(form.get("status"));
     const note = String(form.get("note") || "");
+
+    // Verify the target user belongs to this tenant before writing.
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .eq("tenant_id", tenant.id)
+      .maybeSingle();
+    if (!target) return data({ error: "Invalid user", success: null, intent }, { status: 400 });
+
     const { error } = await setAttendanceStatus(supabase, {
       tenantId: tenant.id,
       userId,
@@ -101,19 +113,6 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
 
   return data({ error: "Unknown intent", success: null, intent });
-}
-
-function fmt(ts: string | null) {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
-
-function durHours(a: string | null, b: string | null): string {
-  if (!a || !b) return "";
-  const ms = new Date(b).getTime() - new Date(a).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${h}h ${m}m`;
 }
 
 // GPS-gated punch panel (client component)
@@ -189,11 +188,11 @@ function PunchPanel({
         <div className="flex flex-wrap gap-3 mb-6">
           <div className="bevel-sunken px-4 py-3 min-w-28">
             <p className="eyebrow mb-1">PUNCH IN</p>
-            <p className="tnum font-mono text-ink font-bold">{fmt(todayRecord?.punch_in_at ?? null)}</p>
+            <p className="tnum font-mono text-ink font-bold">{fmtTime(todayRecord?.punch_in_at ?? null)}</p>
           </div>
           <div className="bevel-sunken px-4 py-3 min-w-28">
             <p className="eyebrow mb-1">PUNCH OUT</p>
-            <p className="tnum font-mono text-ink font-bold">{fmt(todayRecord?.punch_out_at ?? null)}</p>
+            <p className="tnum font-mono text-ink font-bold">{fmtTime(todayRecord?.punch_out_at ?? null)}</p>
           </div>
           {todayRecord?.punch_in_at && todayRecord?.punch_out_at && (
             <div className="bevel-sunken px-4 py-3 min-w-28">
@@ -244,16 +243,8 @@ function PunchPanel({
         )}
 
         {/* Feedback */}
-        {actionData?.error && (
-          <div className="bevel-sunken px-4 py-2.5 mb-4 border-l-4" style={{ borderLeftColor: "var(--err)" }}>
-            <p className="text-xs font-mono" style={{ color: "var(--err)" }}>{actionData.error}</p>
-          </div>
-        )}
-        {actionData?.success && (
-          <div className="bevel-sunken px-4 py-2.5 mb-4 border-l-4" style={{ borderLeftColor: "var(--ok)" }}>
-            <p className="text-xs font-mono" style={{ color: "var(--ok)" }}>{actionData.success}</p>
-          </div>
-        )}
+        <FlashMessage message={actionData?.error} variant="error" />
+        <FlashMessage message={actionData?.success} variant="success" />
 
         {/* Action buttons */}
         <Form method="post" ref={formRef}>
@@ -392,14 +383,14 @@ export default function AttendancePage() {
                 <dl className="space-y-2 text-sm">
                   <div>
                     <dt className="eyebrow">PUNCH IN</dt>
-                    <dd className="tnum font-mono text-ink mt-0.5">{fmt(selectedRecord.punch_in_at)}</dd>
+                    <dd className="tnum font-mono text-ink mt-0.5">{fmtTime(selectedRecord.punch_in_at)}</dd>
                     {selectedRecord.punch_in_addr && (
                       <dd className="text-xs text-ink-2 font-mono mt-0.5 break-words">{selectedRecord.punch_in_addr}</dd>
                     )}
                   </div>
                   <div>
                     <dt className="eyebrow">PUNCH OUT</dt>
-                    <dd className="tnum font-mono text-ink mt-0.5">{fmt(selectedRecord.punch_out_at)}</dd>
+                    <dd className="tnum font-mono text-ink mt-0.5">{fmtTime(selectedRecord.punch_out_at)}</dd>
                     {selectedRecord.punch_out_addr && (
                       <dd className="text-xs text-ink-2 font-mono mt-0.5 break-words">{selectedRecord.punch_out_addr}</dd>
                     )}
@@ -463,7 +454,7 @@ export default function AttendancePage() {
                         )}
                       </div>
                       <p className="eyebrow text-ink-2">
-                        {fmt(r.punch_in_at)} → {fmt(r.punch_out_at)}
+                        {fmtTime(r.punch_in_at)} → {fmtTime(r.punch_out_at)}
                       </p>
                     </div>
                   </li>
@@ -506,7 +497,7 @@ export default function AttendancePage() {
                       {row.punch_in_at ? (row.punch_out_at ? "COMPLETE" : "IN") : "NOT IN"}
                     </span>
                     <div className="shrink-0 text-right">
-                      <p className="tnum font-mono text-xs text-ink-2">{fmt(row.punch_in_at)} → {fmt(row.punch_out_at)}</p>
+                      <p className="tnum font-mono text-xs text-ink-2">{fmtTime(row.punch_in_at)} → {fmtTime(row.punch_out_at)}</p>
                       {row.punch_in_at && row.punch_out_at && (
                         <p className="tnum font-mono text-xs text-muted">{durHours(row.punch_in_at, row.punch_out_at)}</p>
                       )}
@@ -527,7 +518,7 @@ export default function AttendancePage() {
                   lat: r.punch_in_lat!,
                   lng: r.punch_in_lng!,
                   name: r.profile.full_name,
-                  time: fmt(r.punch_in_at),
+                  time: fmtTime(r.punch_in_at),
                   addr: r.punch_in_addr,
                 }))}
             />

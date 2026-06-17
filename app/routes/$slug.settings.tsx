@@ -1,13 +1,15 @@
 import { data, Form, redirect, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.settings";
 import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
-import { createSupabaseServerClient, createSupabaseServiceClient } from "~/lib/supabase.server";
+import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { Tenant } from "~/types/app";
 import type { TenantOutletContext } from "./$slug";
 import { getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Button } from "~/components/Button";
 import { FormField } from "~/components/FormField";
+import { FlashMessage } from "~/components/FlashMessage";
+import { isHR } from "~/lib/roles";
 
 export function meta() {
   return [{ title: "Settings — Glacia HRMS" }];
@@ -16,7 +18,7 @@ export function meta() {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const slug = params.slug!;
   const { role } = await requireChildLoaderAuth(request, context.cloudflare.env);
-  if (!["owner", "hr", "admin"].includes(role)) {
+  if (!isHR(role)) {
     throw redirect(`/${slug}/dashboard`);
   }
   return data({});
@@ -26,7 +28,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const slug = params.slug!;
   const env = context.cloudflare.env;
   const { profile, tenant } = await requireHR(request, env, slug);
-  const service = createSupabaseServiceClient(env);
+  const { supabase } = createSupabaseServerClient(request, env);
   const form = await request.formData();
   const intent = String(form.get("intent"));
 
@@ -37,7 +39,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
     if (!name) return data({ error: "Company name is required", intent, success: null, logoUrl: null }, { status: 400 });
 
-    const { error } = await service
+    const { error } = await supabase
       .from("tenants")
       .update({ name, theme: { accent: accentColor, accentDark } })
       .eq("id", tenant.id);
@@ -58,7 +60,6 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     const path = `${tenant.id}/logo.${ext}`;
     const arrayBuffer = await file.arrayBuffer();
 
-    const { supabase } = createSupabaseServerClient(request, env);
     const { error: uploadError } = await supabase.storage
       .from("tenant-logos")
       .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
@@ -68,18 +69,18 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     const { data: urlData } = supabase.storage.from("tenant-logos").getPublicUrl(path);
     const logoUrl = urlData.publicUrl + `?t=${Date.now()}`;
 
-    await service.from("tenants").update({ logo_url: logoUrl }).eq("id", tenant.id);
+    await supabase.from("tenants").update({ logo_url: logoUrl }).eq("id", tenant.id);
     return data({ success: "Logo updated", intent, error: null, logoUrl });
   }
 
   if (intent === "remove_logo") {
-    await service.from("tenants").update({ logo_url: null }).eq("id", tenant.id);
+    await supabase.from("tenants").update({ logo_url: null }).eq("id", tenant.id);
     return data({ success: "Logo removed", intent, error: null, logoUrl: null });
   }
 
   if (intent === "toggle_gps") {
     const gpsRequired = form.get("gps_required") === "true";
-    await service.from("tenants").update({ gps_required: gpsRequired }).eq("id", tenant.id);
+    await supabase.from("tenants").update({ gps_required: gpsRequired }).eq("id", tenant.id);
     return data({ success: `GPS attendance ${gpsRequired ? "enabled" : "disabled"}`, intent, error: null, logoUrl: null });
   }
 
@@ -106,16 +107,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Flash */}
-      {actionData?.success && (
-        <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--ok)" }}>
-          {actionData.success}
-        </div>
-      )}
-      {actionData?.error && (
-        <div className="bevel-sunken p-4 text-sm font-mono text-err">
-          {actionData.error}
-        </div>
-      )}
+      <FlashMessage message={actionData?.success} variant="success" />
+      <FlashMessage message={actionData?.error} variant="error" />
 
       {/* Company branding */}
       <IcyCard>

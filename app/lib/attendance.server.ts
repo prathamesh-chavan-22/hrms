@@ -89,26 +89,21 @@ export async function getTeamAttendanceToday(
   tenantId: string
 ): Promise<TeamAttendanceRow[]> {
   const today = todayIST();
-  const { data: profiles } = await supabase
+  const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, department, designation")
-    .eq("tenant_id", tenantId)
-    .eq("status", "active");
-
-  if (!profiles || profiles.length === 0) return [];
-
-  const { data: records } = await supabase
-    .from("attendance")
     .select(
-      "id, user_id, date, punch_in_at, punch_in_lat, punch_in_lng, punch_in_addr, punch_out_at, punch_out_lat, punch_out_lng, punch_out_addr, status, note"
+      `id, full_name, department, designation,
+       attendance!left (
+         id, date, punch_in_at, punch_in_lat, punch_in_lng, punch_in_addr,
+         punch_out_at, punch_out_lat, punch_out_lng, punch_out_addr, status, note
+       )`
     )
     .eq("tenant_id", tenantId)
-    .eq("date", today);
+    .eq("status", "active")
+    .eq("attendance.date", today);
 
-  const recordMap = new Map((records ?? []).map((r) => [r.user_id, r]));
-
-  return profiles.map((p) => {
-    const rec = recordMap.get(p.id);
+  return (data ?? []).map((p) => {
+    const rec = Array.isArray(p.attendance) ? p.attendance[0] : undefined;
     return {
       id: rec?.id ?? "",
       user_id: p.id,
@@ -147,40 +142,32 @@ export async function punchIn(
   const today = todayIST();
   const now = new Date().toISOString();
 
-  // Check existing row
-  const { data: existing } = await supabase
+  // Attempt to insert a new row. On conflict (tenant_id, user_id, date), update
+  // only when punch_in_at is still null — preserving an existing punch-in.
+  const { data: upserted, error } = await supabase
     .from("attendance")
-    .select("id, punch_in_at")
-    .eq("tenant_id", params.tenantId)
-    .eq("user_id", params.userId)
-    .eq("date", today)
+    .upsert(
+      {
+        tenant_id: params.tenantId,
+        user_id: params.userId,
+        date: today,
+        punch_in_at: now,
+        punch_in_lat: params.lat ?? null,
+        punch_in_lng: params.lng ?? null,
+        punch_in_addr: params.addr ?? null,
+        status: "present",
+      },
+      { onConflict: "tenant_id,user_id,date", ignoreDuplicates: true }
+    )
+    .select("punch_in_at")
     .maybeSingle();
 
-  if (existing?.punch_in_at) {
-    return { error: "Already punched in today" };
-  }
+  if (error) return { error: error.message };
 
-  const payload = {
-    tenant_id: params.tenantId,
-    user_id: params.userId,
-    date: today,
-    punch_in_at: now,
-    punch_in_lat: params.lat ?? null,
-    punch_in_lng: params.lng ?? null,
-    punch_in_addr: params.addr ?? null,
-    status: "present",
-  };
+  // ignoreDuplicates:true returns null when the row already existed unchanged.
+  if (!upserted) return { error: "Already punched in today" };
 
-  if (existing) {
-    const { error } = await supabase
-      .from("attendance")
-      .update(payload)
-      .eq("id", existing.id);
-    return { error: error?.message };
-  }
-
-  const { error } = await supabase.from("attendance").insert(payload);
-  return { error: error?.message };
+  return {};
 }
 
 export async function punchOut(
@@ -193,22 +180,8 @@ export async function punchOut(
   const today = todayIST();
   const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from("attendance")
-    .select("id, punch_in_at, punch_out_at")
-    .eq("tenant_id", params.tenantId)
-    .eq("user_id", params.userId)
-    .eq("date", today)
-    .maybeSingle();
-
-  if (!existing?.punch_in_at) {
-    return { error: "Cannot punch out without punching in first" };
-  }
-  if (existing?.punch_out_at) {
-    return { error: "Already punched out today" };
-  }
-
-  const { error } = await supabase
+  // Single UPDATE: only matches rows that are punched-in but not yet punched-out.
+  const { data: updated, error } = await supabase
     .from("attendance")
     .update({
       punch_out_at: now,
@@ -216,9 +189,30 @@ export async function punchOut(
       punch_out_lng: params.lng ?? null,
       punch_out_addr: params.addr ?? null,
     })
-    .eq("id", existing.id);
+    .eq("tenant_id", params.tenantId)
+    .eq("user_id", params.userId)
+    .eq("date", today)
+    .not("punch_in_at", "is", null)
+    .is("punch_out_at", null)
+    .select("id")
+    .maybeSingle();
 
-  return { error: error?.message };
+  if (error) return { error: error.message };
+
+  if (!updated) {
+    // Determine which guard failed — extra read only on the error path.
+    const { data: row } = await supabase
+      .from("attendance")
+      .select("punch_in_at, punch_out_at")
+      .eq("tenant_id", params.tenantId)
+      .eq("user_id", params.userId)
+      .eq("date", today)
+      .maybeSingle();
+    if (!row?.punch_in_at) return { error: "Cannot punch out without punching in first" };
+    return { error: "Already punched out today" };
+  }
+
+  return {};
 }
 
 export async function setAttendanceStatus(
@@ -231,28 +225,11 @@ export async function setAttendanceStatus(
     note,
   }: { tenantId: string; userId: string; date: string; status: string; note?: string }
 ): Promise<{ error?: string }> {
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from("attendance")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId)
-    .eq("date", date)
-    .maybeSingle();
-
-  if (existing) {
-    const { error } = await supabase
-      .from("attendance")
-      .update({ status, note: note ?? null })
-      .eq("id", existing.id);
-    return { error: error?.message };
-  }
-
-  const { error } = await supabase.from("attendance").insert({
-    tenant_id: tenantId,
-    user_id: userId,
-    date,
-    status,
-    note: note ?? null,
-  });
+    .upsert(
+      { tenant_id: tenantId, user_id: userId, date, status, note: note ?? null },
+      { onConflict: "tenant_id,user_id,date", ignoreDuplicates: false }
+    );
   return { error: error?.message };
 }
