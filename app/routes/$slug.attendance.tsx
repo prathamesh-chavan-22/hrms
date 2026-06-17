@@ -1,8 +1,9 @@
-import { data, Form, useLoaderData, useActionData, useNavigation, useSearchParams } from "react-router";
+import { data, Form, useLoaderData, useOutletContext, useActionData, useNavigation, useSearchParams } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import type { Route } from "./+types/$slug.attendance";
-import { requireTenantAccess } from "~/lib/auth.server";
+import { requireTenantAccess, requireChildLoaderAuth } from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
+import type { TenantOutletContext } from "./$slug";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Button } from "~/components/Button";
 import { AttendanceCalendar } from "~/components/AttendanceCalendar";
@@ -25,25 +26,21 @@ export function meta() {
 }
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const slug = params.slug!;
   const env = context.cloudflare.env;
-  const { profile, tenant } = await requireTenantAccess(request, env, slug);
-  const { supabase } = createSupabaseServerClient(request, env);
+  const { userId, tenantId, role, supabase } = await requireChildLoaderAuth(request, env);
 
   const url = new URL(request.url);
   const qYear = parseInt(url.searchParams.get("year") ?? "") || new Date().getFullYear();
   const qMonth = parseInt(url.searchParams.get("month") ?? "") || new Date().getMonth() + 1;
-  const isHR = ["owner", "hr", "admin"].includes(profile.role);
+  const isHR = ["owner", "hr", "admin"].includes(role);
 
   const [monthAttendance, todayRecord, teamToday] = await Promise.all([
-    getMonthAttendance(supabase, tenant.id, profile.id, qYear, qMonth),
-    getTodayAttendance(supabase, tenant.id, profile.id),
-    isHR ? getTeamAttendanceToday(supabase, tenant.id) : Promise.resolve([]),
+    getMonthAttendance(supabase, tenantId, userId, qYear, qMonth),
+    getTodayAttendance(supabase, tenantId, userId),
+    isHR ? getTeamAttendanceToday(supabase, tenantId) : Promise.resolve([]),
   ]);
 
   return data({
-    profile,
-    tenant,
     monthAttendance,
     todayRecord,
     teamToday,
@@ -302,9 +299,8 @@ function PunchPanel({
 }
 
 export default function AttendancePage() {
+  const { profile, tenant } = useOutletContext<TenantOutletContext>();
   const {
-    profile,
-    tenant,
     monthAttendance,
     todayRecord,
     teamToday,

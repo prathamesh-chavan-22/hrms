@@ -5,6 +5,12 @@ import { appendCookieHeaders } from "~/lib/supabase.server";
 import { TenantSidebar } from "~/components/TenantSidebar";
 import type { Profile, Tenant } from "~/types/app";
 
+export type TenantOutletContext = {
+  profile: Profile;
+  tenant: Tenant;
+  slug: string;
+};
+
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const slug = params.slug!;
   const { profile, tenant, cookies } = await requireTenantAccess(

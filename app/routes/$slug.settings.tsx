@@ -1,12 +1,13 @@
-import { data, Form, useLoaderData, useActionData, useNavigation } from "react-router";
+import { data, Form, redirect, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.settings";
-import { requireHR } from "~/lib/auth.server";
+import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "~/lib/supabase.server";
+import type { Tenant } from "~/types/app";
+import type { TenantOutletContext } from "./$slug";
 import { getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Button } from "~/components/Button";
 import { FormField } from "~/components/FormField";
-import type { Tenant } from "~/types/app";
 
 export function meta() {
   return [{ title: "Settings — Glacia HRMS" }];
@@ -14,8 +15,11 @@ export function meta() {
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const slug = params.slug!;
-  const { profile, tenant } = await requireHR(request, context.cloudflare.env, slug);
-  return data({ profile, tenant });
+  const { role } = await requireChildLoaderAuth(request, context.cloudflare.env);
+  if (!["owner", "hr", "admin"].includes(role)) {
+    throw redirect(`/${slug}/dashboard`);
+  }
+  return data({});
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -83,7 +87,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 }
 
 export default function SettingsPage() {
-  const { profile, tenant } = useLoaderData<typeof loader>();
+  const { profile, tenant } = useOutletContext<TenantOutletContext>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";

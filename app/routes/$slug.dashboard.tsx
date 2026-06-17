@@ -1,8 +1,9 @@
-import { useLoaderData, data, Link } from "react-router";
+import { useLoaderData, useOutletContext, data, Link } from "react-router";
 import { useState } from "react";
 import type { Route } from "./+types/$slug.dashboard";
-import { requireTenantAccess } from "~/lib/auth.server";
+import { requireChildLoaderAuth } from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
+import type { TenantOutletContext } from "./$slug";
 import { getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Badge, statusBadge } from "~/components/Badge";
@@ -12,7 +13,6 @@ import {
   getTodayAttendance,
   todayIST,
 } from "~/lib/attendance.server";
-import type { Tenant } from "~/types/app";
 import type { DayMarker } from "~/components/AttendanceCalendar";
 
 export function meta() {
@@ -22,53 +22,48 @@ export function meta() {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const slug = params.slug!;
   const env = context.cloudflare.env;
-  const { profile, tenant } = await requireTenantAccess(request, env, slug);
-  const { supabase } = createSupabaseServerClient(request, env);
+  const { userId, tenantId, supabase } = await requireChildLoaderAuth(request, env);
 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
   const today = todayIST();
 
-  const [employeesRes, holidaysRes, countRes, monthAttendance, todayRecord] =
+  const [employeesRes, upcomingHolidaysRes, countRes, monthAttendance, todayRecord] =
     await Promise.all([
       supabase
         .from("profiles")
         .select("id, full_name, role, status, department, designation, created_at")
-        .eq("tenant_id", tenant.id)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
         .from("holidays")
         .select("id, name, date, type")
-        .eq("tenant_id", tenant.id)
-        .gte("date", `${year}-${String(month).padStart(2, "0")}-01`)
-        .lte("date", `${year}-12-31`)
+        .eq("tenant_id", tenantId)
+        .gte("date", today)
         .order("date")
-        .limit(12),
+        .limit(5),
       supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenant.id),
-      getMonthAttendance(supabase, tenant.id, profile.id, year, month),
-      getTodayAttendance(supabase, tenant.id, profile.id),
+        .eq("tenant_id", tenantId),
+      getMonthAttendance(supabase, tenantId, userId, year, month),
+      getTodayAttendance(supabase, tenantId, userId),
     ]);
 
   type EmployeeRow = { id: string; full_name: string; role: string; status: string; department: string | null; designation: string | null; created_at: string };
   type HolidayRow = { id: string; name: string; date: string; type: string };
 
   return data({
-    profile,
-    tenant,
     recentEmployees: (employeesRes.data ?? []) as EmployeeRow[],
-    upcomingHolidays: (holidaysRes.data ?? []) as HolidayRow[],
+    upcomingHolidays: (upcomingHolidaysRes.data ?? []) as HolidayRow[],
     totalEmployees: countRes.count ?? 0,
     monthAttendance,
     todayRecord,
     calYear: year,
     calMonth: month,
     today,
-    allHolidays: (holidaysRes.data ?? []) as HolidayRow[],
   });
 }
 
@@ -106,9 +101,8 @@ function durHours(a: string | null, b: string | null): string {
 }
 
 export default function DashboardPage() {
+  const { profile, tenant } = useOutletContext<TenantOutletContext>();
   const {
-    profile,
-    tenant,
     recentEmployees,
     upcomingHolidays,
     totalEmployees,
@@ -117,7 +111,6 @@ export default function DashboardPage() {
     calYear,
     calMonth,
     today,
-    allHolidays,
   } = useLoaderData<typeof loader>();
 
   const plan = getPlan(tenant.plan);
@@ -125,7 +118,9 @@ export default function DashboardPage() {
 
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
 
-  // Build calendar markers: attendance records + holidays
+  const calMonthPrefix = `${calYear}-${String(calMonth).padStart(2, "0")}`;
+
+  // Build calendar markers: attendance records + upcoming holidays in current month
   const markers: DayMarker[] = [
     ...monthAttendance.map(
       (r): DayMarker => ({
@@ -137,13 +132,15 @@ export default function DashboardPage() {
         punch_out_addr: r.punch_out_addr,
       })
     ),
-    ...allHolidays.map(
-      (h): DayMarker => ({
-        date: h.date,
-        kind: "holiday",
-        label: h.name,
-      })
-    ),
+    ...upcomingHolidays
+      .filter((h) => h.date.startsWith(calMonthPrefix))
+      .map(
+        (h): DayMarker => ({
+          date: h.date,
+          kind: "holiday",
+          label: h.name,
+        })
+      ),
   ];
 
   const selectedMarker = markers.find((m) => m.date === selectedDate);
@@ -374,7 +371,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <ul>
-                {upcomingHolidays.slice(0, 5).map((h) => {
+                {upcomingHolidays.map((h) => {
                   const d = new Date(h.date + "T00:00:00");
                   return (
                     <li

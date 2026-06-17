@@ -58,6 +58,28 @@ export async function requireHR(request: Request, env: Env, slug: string) {
   return result;
 }
 
+/**
+ * Lightweight auth for child route loaders. Validates the session and fetches
+ * only the fields needed to scope DB queries (tenant_id, user id, role). The
+ * full profile and tenant objects are provided by the layout loader via outlet
+ * context, so child loaders should not re-fetch them.
+ */
+export async function requireChildLoaderAuth(request: Request, env: Env) {
+  const { supabase, cookies } = createSupabaseServerClient(request, env);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw redirect("/login");
+
+  const { data: row } = await supabase
+    .from("profiles")
+    .select("id, role, tenant_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!row) throw redirect("/login");
+
+  return { userId: user.id as string, tenantId: row.tenant_id as string, role: row.role as string, supabase, cookies };
+}
+
 export async function resolveRedirectAfterLogin(request: Request, env: Env) {
   const { supabase, cookies, user } = await getSession(request, env);
   if (!user) return { user: null, cookies, redirectTo: null };

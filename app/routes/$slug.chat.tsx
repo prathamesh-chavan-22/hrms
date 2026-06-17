@@ -1,8 +1,9 @@
-import { data, Form, useLoaderData, useActionData, useNavigation } from "react-router";
+import { data, Form, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.chat";
-import { requireTenantAccess } from "~/lib/auth.server";
+import { requireTenantAccess, requireChildLoaderAuth } from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
-import type { Profile, Tenant, ChatbotIntent } from "~/types/app";
+import type { ChatbotIntent } from "~/types/app";
+import type { TenantOutletContext } from "./$slug";
 import { useState, useRef, useEffect } from "react";
 import { todayIST } from "~/lib/dates";
 
@@ -10,20 +11,11 @@ export function meta() {
   return [{ title: "Assistant — Glacia HRMS" }];
 }
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const slug = params.slug!;
-  const env = context.cloudflare.env;
-  const { profile, tenant } = await requireTenantAccess(request, env, slug);
-  const { supabase } = createSupabaseServerClient(request, env);
-
-  const { data: intents } = await supabase
-    .from("chatbot_intents")
-    .select("*")
-    .or(`is_global.eq.true,tenant_id.eq.${tenant.id}`)
-    .eq("is_active", true)
-    .order("priority", { ascending: false });
-
-  return data({ profile, tenant, intents: intents ?? [] });
+export async function loader({ request, context }: Route.LoaderArgs) {
+  // Auth guard only — profile/tenant come from outlet context; intents only
+  // needed in action when a message is submitted.
+  await requireChildLoaderAuth(request, context.cloudflare.env);
+  return data({});
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -103,7 +95,7 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const { profile } = useLoaderData<typeof loader>();
+  const { profile } = useOutletContext<TenantOutletContext>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";

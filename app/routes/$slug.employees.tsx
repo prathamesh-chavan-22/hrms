@@ -1,14 +1,15 @@
-import { data, redirect, Form, useLoaderData, useActionData, useNavigation } from "react-router";
+import { data, redirect, Form, useLoaderData, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.employees";
-import { requireHR } from "~/lib/auth.server";
+import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "~/lib/supabase.server";
+import type { TenantOutletContext } from "./$slug";
 import { sendInviteEmail } from "~/lib/email.server";
 import { canAddEmployee, getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Badge, roleBadge, statusBadge } from "~/components/Badge";
 import { Button } from "~/components/Button";
 import { FormField, SelectField } from "~/components/FormField";
-import type { Profile, Tenant } from "~/types/app";
+import type { Profile } from "~/types/app";
 import { useState } from "react";
 
 export function meta() {
@@ -18,30 +19,31 @@ export function meta() {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const slug = params.slug!;
   const env = context.cloudflare.env;
-  const { profile, tenant } = await requireHR(request, env, slug);
-  const { supabase } = createSupabaseServerClient(request, env);
+  const { tenantId, role, supabase } = await requireChildLoaderAuth(request, env);
+
+  if (!["owner", "hr", "admin"].includes(role)) {
+    throw redirect(`/${slug}/dashboard`);
+  }
 
   const [employeesRes, invitesRes, countRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, email, role, status, department, designation, employee_code, date_of_joining, created_at")
-      .eq("tenant_id", tenant.id)
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false }),
     supabase
       .from("invites")
       .select("id, email, role, expires_at, accepted_at, created_at")
-      .eq("tenant_id", tenant.id)
+      .eq("tenant_id", tenantId)
       .is("accepted_at", null)
       .gt("expires_at", new Date().toISOString()),
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id),
+      .eq("tenant_id", tenantId),
   ]);
 
   return data({
-    profile,
-    tenant,
     employees: employeesRes.data ?? [],
     pendingInvites: invitesRes.data ?? [],
     totalCount: countRes.count ?? 0,
@@ -125,7 +127,8 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 }
 
 export default function EmployeesPage() {
-  const { profile, tenant, employees, pendingInvites, totalCount } = useLoaderData<typeof loader>();
+  const { profile, tenant } = useOutletContext<TenantOutletContext>();
+  const { employees, pendingInvites, totalCount } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
