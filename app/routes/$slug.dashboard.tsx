@@ -2,7 +2,6 @@ import { useLoaderData, useOutletContext, data, Link } from "react-router";
 import { useState } from "react";
 import type { Route } from "./+types/$slug.dashboard";
 import { requireChildLoaderAuth } from "~/lib/auth.server";
-import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { TenantOutletContext } from "./$slug";
 import { getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";

@@ -1,7 +1,7 @@
 import { data, redirect, Form, useLoaderData, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.employees";
 import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
-import { createSupabaseServerClient, createSupabaseServiceClient } from "~/lib/supabase.server";
+import { createSupabaseServiceClient } from "~/lib/supabase.server";
 import type { TenantOutletContext } from "./$slug";
 import { sendInviteEmail } from "~/lib/email.server";
 import { canAddEmployee, getPlan } from "~/lib/plans";
