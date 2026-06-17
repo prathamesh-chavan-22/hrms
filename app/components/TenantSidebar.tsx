@@ -50,7 +50,7 @@ export function TenantSidebar({ tenant, profile, slug }: TenantSidebarProps) {
   ];
 
   return (
-    <aside className="w-60 min-h-screen bg-surface border-r-2 border-rule flex flex-col">
+    <aside className="w-60 shrink-0 h-full bg-surface border-r-2 border-rule flex flex-col">
       {/* Logo + company */}
       <div className="panel-header px-4 py-4">
         {tenant.logo_url ? (

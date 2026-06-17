@@ -25,14 +25,14 @@ export default function TenantLayout() {
 
   return (
     <div
-      className="flex min-h-screen bg-bg"
+      className="flex h-screen overflow-hidden bg-bg"
       style={{
         ["--tenant-accent" as string]: accentColor,
         ["--tenant-accent-dark" as string]: accentDark,
       }}
     >
       <TenantSidebar tenant={tenant} profile={profile} slug={slug} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <Outlet context={{ profile, tenant, slug }} />
       </main>
     </div>
