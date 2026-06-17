@@ -17,6 +17,7 @@
 		"@supabase/ssr": "^0.12.0",
 		"@supabase/supabase-js": "^2.108.2",
 		"isbot": "5.1.32",
+		"leaflet": "^1.9.4",
 		"react": "19.2.1",
 		"react-dom": "19.2.1",
 		"react-router": "7.9.6",
@@ -24,8 +25,10 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "1.15.3",
+		"@cloudflare/workers-types": "^4.20260617.1",
 		"@react-router/dev": "7.9.6",
 		"@tailwindcss/vite": "4.1.17",
+		"@types/leaflet": "^1.9.21",
 		"@types/node": "24.10.1",
 		"@types/react": "19.2.7",
 		"@types/react-dom": "19.2.3",

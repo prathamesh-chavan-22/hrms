@@ -277,6 +277,13 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Attendance calendar cells ───────────────────────────── */
+.cal-cell {
+  background: var(--surface);
+  transition: background 0.06s;
+}
+.cal-cell:hover { background: var(--surface-2); }
+
 /* ── Reduced motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
