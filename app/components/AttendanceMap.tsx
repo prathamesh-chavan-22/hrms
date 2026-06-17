@@ -1,4 +1,13 @@
 import { useEffect, useRef } from "react";
+import "leaflet/dist/leaflet.css";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export type MapMarker = {
   lat: number;
@@ -31,15 +40,6 @@ export function AttendanceMap({ markers, className = "" }: AttendanceMapProps) {
         mapRef.current = null;
       }
 
-      // Inject leaflet CSS once
-      if (!document.getElementById("leaflet-css")) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
-
       const center: [number, number] = [markers[0].lat, markers[0].lng];
       const map = L.map(containerRef.current!).setView(center, 13);
       mapRef.current = map;
@@ -58,12 +58,13 @@ export function AttendanceMap({ markers, className = "" }: AttendanceMapProps) {
       });
 
       markers.forEach((m) => {
+        const addrSnippet = m.addr
+          ? `<br/><span style="opacity:0.6;">${escapeHtml(m.addr.slice(0, 60))}${m.addr.length > 60 ? "…" : ""}</span>`
+          : "";
         const popup = L.popup({
           className: "leaflet-brutalist-popup",
         }).setContent(
-          `<div style="font-family:monospace;font-size:11px;line-height:1.6;text-transform:uppercase;letter-spacing:0.04em;">
-            <b>${m.name}</b><br/>IN: ${m.time}${m.addr ? `<br/><span style="opacity:0.6;">${m.addr.slice(0, 60)}${m.addr.length > 60 ? "…" : ""}</span>` : ""}
-          </div>`
+          `<div style="font-family:monospace;font-size:11px;line-height:1.6;text-transform:uppercase;letter-spacing:0.04em;"><b>${escapeHtml(m.name)}</b><br/>IN: ${escapeHtml(m.time)}${addrSnippet}</div>`
         );
         L.marker([m.lat, m.lng], { icon }).addTo(map).bindPopup(popup);
       });
