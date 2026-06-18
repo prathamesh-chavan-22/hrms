@@ -10,8 +10,7 @@ import { Badge, roleBadge, statusBadge } from "~/components/Badge";
 import { Button } from "~/components/Button";
 import { FormField, SelectField } from "~/components/FormField";
 import { FlashMessage } from "~/components/FlashMessage";
-import { isHR } from "~/lib/roles";
-import type { Profile } from "~/types/app";
+import { isHR, inviteRoleOptions, isInvitableRole } from "~/lib/roles";
 import { useState } from "react";
 
 export function meta() {
@@ -62,7 +61,34 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
   if (intent === "invite") {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
-    const role = String(form.get("role") ?? "employee") as Profile["role"];
+    const rawRole = String(form.get("role") ?? "employee");
+
+    // #region agent log
+    fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
+      body: JSON.stringify({
+        sessionId: "05651e",
+        runId: "post-fix",
+        hypothesisId: "H1",
+        location: "$slug.employees.tsx:invite-entry",
+        message: "invite role parsed from form",
+        data: {
+          rawRole,
+          inviterRole: profile.role,
+          allowedRoles: inviteRoleOptions(profile.role).map((o) => o.value),
+          passesWhitelist: isInvitableRole(rawRole, profile.role),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    if (!isInvitableRole(rawRole, profile.role)) {
+      return data({ error: "Invalid role for invite", intent, success: null }, { status: 403 });
+    }
+
+    const role = rawRole;
 
     if (!email) return data({ error: "Email is required", intent, success: null }, { status: 400 });
 
@@ -96,8 +122,39 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       .single();
 
     if (inviteError || !invite) {
+      // #region agent log
+      fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
+        body: JSON.stringify({
+          sessionId: "05651e",
+        runId: "post-fix",
+        hypothesisId: "H2",
+        location: "$slug.employees.tsx:invite-insert-failed",
+          message: "invite insert failed",
+          data: { requestedRole: role, error: inviteError?.message ?? null },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       return data({ error: inviteError?.message ?? "Failed to create invite", intent, success: null }, { status: 500 });
     }
+
+    // #region agent log
+    fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
+      body: JSON.stringify({
+        sessionId: "05651e",
+        runId: "post-fix",
+        hypothesisId: "H2",
+        location: "$slug.employees.tsx:invite-insert-success",
+        message: "invite stored in database",
+        data: { requestedRole: role, storedRole: invite.role, inviteId: invite.id },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     await sendInviteEmail(env, {
       to: email,
@@ -138,6 +195,8 @@ export default function EmployeesPage() {
 
   const plan = getPlan(tenant.plan);
   const atCap = totalCount >= plan.maxEmployees;
+  const roleOptions = inviteRoleOptions(profile.role);
+  const canChooseRole = roleOptions.length > 1;
 
   return (
     <div className="p-5 lg:p-7 space-y-5">
@@ -183,17 +242,17 @@ export default function EmployeesPage() {
                 required
                 className="flex-1"
               />
-              <SelectField
-                label="Role"
-                name="role"
-                defaultValue="employee"
-                options={[
-                  { value: "employee", label: "Employee" },
-                  { value: "hr", label: "HR" },
-                  { value: "admin", label: "Admin" },
-                ]}
-                className="w-40"
-              />
+              {canChooseRole ? (
+                <SelectField
+                  label="Role"
+                  name="role"
+                  defaultValue="employee"
+                  options={roleOptions}
+                  className="w-40"
+                />
+              ) : (
+                <input type="hidden" name="role" value="employee" />
+              )}
               <Button type="submit" loading={isSubmitting} className="mb-0.5">
                 Send Invite
               </Button>
