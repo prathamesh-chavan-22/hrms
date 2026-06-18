@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import "leaflet/dist/leaflet.css";
 import { escapeHtml } from "~/lib/format";
 
 export type MapMarker = {
@@ -24,7 +23,8 @@ export function AttendanceMap({ markers, className = "" }: AttendanceMapProps) {
 
     let cancelled = false;
 
-    import("leaflet").then((L) => {
+    void Promise.all([import("leaflet/dist/leaflet.css"), import("leaflet")]).then(([, LModule]) => {
+      const L = LModule.default ?? LModule;
       if (cancelled || !containerRef.current) return;
 
       // Remove existing map
