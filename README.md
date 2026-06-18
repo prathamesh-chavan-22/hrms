@@ -4,7 +4,7 @@ Multi-tenant HR management for growing teams — GPS attendance, leave policy, t
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (required by Wrangler 4.88+)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (included as a dev dependency)
 - A [Supabase](https://supabase.com) project
 - A [Resend](https://resend.com) API key (for invite and welcome emails)

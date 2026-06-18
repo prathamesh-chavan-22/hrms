@@ -46,6 +46,9 @@
 		"wrangler": "4.88.0"
 	},
 	"private": true,
+	"engines": {
+		"node": ">=22.0.0"
+	},
 	"scripts": {
 		"analyze": "vite-bundle-visualizer",
 		"build": "react-router build",
