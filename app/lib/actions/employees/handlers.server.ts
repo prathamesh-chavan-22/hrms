@@ -124,11 +124,11 @@ export const resetPasswordHandler: IntentHandler = async (ctx) => {
 
 export const deactivateHandler: IntentHandler = async (ctx) => {
   const intent = "deactivate";
-  const { profile, tenant, supabase } = await getHRContext(ctx);
+  const { profile, tenant } = await getHRContext(ctx);
   const userId = getString(ctx.form, "userId");
 
   if (userId === profile.id) return actionError("Cannot deactivate yourself", intent);
-  const result = await setEmployeeStatus(supabase, {
+  const result = await setEmployeeStatus(ctx.env, {
     userId,
     tenantId: tenant.id,
     status: "inactive",
@@ -139,10 +139,10 @@ export const deactivateHandler: IntentHandler = async (ctx) => {
 
 export const activateHandler: IntentHandler = async (ctx) => {
   const intent = "activate";
-  const { tenant, supabase } = await getHRContext(ctx);
+  const { tenant } = await getHRContext(ctx);
   const userId = getString(ctx.form, "userId");
 
-  const result = await setEmployeeStatus(supabase, {
+  const result = await setEmployeeStatus(ctx.env, {
     userId,
     tenantId: tenant.id,
     status: "active",

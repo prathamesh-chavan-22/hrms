@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseServiceClient } from "~/lib/supabase.server";
 import {
   listEmployees,
   countProfiles,
-  updateProfileStatus,
 } from "~/lib/repositories/profiles.repository";
 import {
   listPendingInvites,
@@ -26,10 +26,16 @@ export async function loadEmployeeDirectory(supabase: SupabaseClient, tenantId: 
 }
 
 export async function setEmployeeStatus(
-  supabase: SupabaseClient,
+  env: Env,
   params: { userId: string; tenantId: string; status: "active" | "inactive" }
 ) {
-  const { error } = await updateProfileStatus(supabase, params);
+  const service = createSupabaseServiceClient(env);
+  const { error } = await service
+    .from("profiles")
+    .update({ status: params.status })
+    .eq("id", params.userId)
+    .eq("tenant_id", params.tenantId);
+
   if (error) return { error: error.message };
   return { success: true as const };
 }

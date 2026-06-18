@@ -1,16 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function updateProfileStatus(
-  supabase: SupabaseClient,
-  params: { userId: string; tenantId: string; status: "active" | "inactive" }
-) {
-  return supabase
-    .from("profiles")
-    .update({ status: params.status })
-    .eq("id", params.userId)
-    .eq("tenant_id", params.tenantId);
-}
-
 export async function listEmployees(
   supabase: SupabaseClient,
   tenantId: string
