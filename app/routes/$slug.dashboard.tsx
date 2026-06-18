@@ -12,16 +12,16 @@ import {
   getTodayAttendance,
   todayIST,
 } from "~/lib/attendance.server";
-import type { DayMarker } from "~/components/AttendanceCalendar";
 import { fmtTime, durHours } from "~/lib/format";
 import { isHR } from "~/lib/roles";
+import { StatCard } from "~/components/dashboard/StatCard";
+import { buildAttendanceMarkers } from "~/lib/attendance-markers";
 
 export function meta() {
   return [{ title: "Dashboard — Glacia HRMS" }];
 }
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const slug = params.slug!;
+export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;
   const { userId, tenantId, supabase } = await requireChildLoaderAuth(request, env);
 
@@ -68,26 +68,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   });
 }
 
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  sub?: string;
-  tag: string;
-}
-
-function StatCard({ label, value, sub, tag }: StatCardProps) {
-  return (
-    <div className="bevel p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="eyebrow">{label}</p>
-        <span className="chip chip-accent">{tag}</span>
-      </div>
-      <p className="display text-3xl text-ink tnum">{value}</p>
-      {sub && <p className="eyebrow mt-1.5">{sub}</p>}
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const { profile, tenant } = useOutletContext<TenantOutletContext>();
   const {
@@ -108,28 +88,7 @@ export default function DashboardPage() {
 
   const calMonthPrefix = `${calYear}-${String(calMonth).padStart(2, "0")}`;
 
-  // Build calendar markers: attendance records + upcoming holidays in current month
-  const markers: DayMarker[] = [
-    ...monthAttendance.map(
-      (r): DayMarker => ({
-        date: r.date,
-        kind: r.status as DayMarker["kind"],
-        punch_in_at: r.punch_in_at,
-        punch_out_at: r.punch_out_at,
-        punch_in_addr: r.punch_in_addr,
-        punch_out_addr: r.punch_out_addr,
-      })
-    ),
-    ...upcomingHolidays
-      .filter((h) => h.date.startsWith(calMonthPrefix))
-      .map(
-        (h): DayMarker => ({
-          date: h.date,
-          kind: "holiday",
-          label: h.name,
-        })
-      ),
-  ];
+  const markers = buildAttendanceMarkers(monthAttendance, upcomingHolidays, calMonthPrefix);
 
   const selectedMarker = markers.find((m) => m.date === selectedDate);
 
@@ -232,7 +191,7 @@ export default function DashboardPage() {
             initialYear={calYear}
             initialMonth={calMonth}
             selectedDate={selectedDate}
-            onDayClick={(date, marker) => setSelectedDate(date === selectedDate ? null : date)}
+            onDayClick={(date, _marker) => setSelectedDate(date === selectedDate ? null : date)}
           />
         </div>
 

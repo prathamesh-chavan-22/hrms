@@ -1,0 +1,5 @@
+.react-router/
+build/
+.worktrees/
+node_modules/
+worker-configuration.d.ts

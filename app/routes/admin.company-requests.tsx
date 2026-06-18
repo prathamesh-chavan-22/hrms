@@ -1,22 +1,16 @@
-import { data, redirect, Form, useLoaderData, useActionData, useNavigation, Link } from "react-router";
+import { data, Form, useLoaderData, useActionData, useNavigation, Link } from "react-router";
 import type { Route } from "./+types/admin.company-requests";
-import {
-  requireSuperAdmin,
-  approveCompanyRequest,
-  rejectCompanyRequest,
-} from "~/lib/auth.server";
+import { requireSuperAdmin } from "~/lib/auth.server";
 import { createSupabaseServiceClient } from "~/lib/supabase.server";
-import {
-  sendWelcomeEmail,
-  sendCompanyApprovedEmail,
-  sendCompanyRejectedEmail,
-} from "~/lib/email.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { Button } from "~/components/Button";
-import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
+import { IcyCard, IcyCardHeader } from "~/components/IcyCard";
 import { FlashMessage } from "~/components/FlashMessage";
 import { Badge, statusBadge } from "~/components/Badge";
 import type { CompanyRequest } from "~/types/app";
+import { dispatchIntent } from "~/lib/actions/intent-handler.server";
+import { companyRequestIntentHandlers } from "~/lib/actions/company-requests/handlers.server";
+import { getIntent, getString } from "~/lib/validation/form-data";
 
 export function meta() {
   return [{ title: "Company Requests — Glacia Admin" }];
@@ -35,63 +29,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const env = context.cloudflare.env;
-  await requireSuperAdmin(request, env);
+  await requireSuperAdmin(request, context.cloudflare.env);
 
   const form = await request.formData();
-  const intent = String(form.get("intent"));
-  const requestId = String(form.get("requestId") ?? "");
+  const intent = getIntent(form);
+  const requestId = getString(form, "requestId");
 
   if (!requestId) {
     return data({ error: "Missing request ID", success: null }, { status: 400 });
   }
 
-  if (intent === "approve") {
-    const result = await approveCompanyRequest(env, requestId);
-    if (result.error) {
-      return data({ error: result.error, success: null }, { status: 400 });
-    }
-
-    const { request: companyRequest, tenant } = result;
-    if (companyRequest && tenant) {
-      sendWelcomeEmail(env, {
-        to: companyRequest.owner_email,
-        name: companyRequest.owner_name,
-        companyName: companyRequest.company_name,
-        slug: companyRequest.slug,
-      }).catch(console.error);
-
-      sendCompanyApprovedEmail(env, {
-        to: companyRequest.owner_email,
-        ownerName: companyRequest.owner_name,
-        companyName: companyRequest.company_name,
-        slug: companyRequest.slug,
-      }).catch(console.error);
-    }
-
-    return data({ success: `Approved ${companyRequest?.company_name}`, error: null });
+  if (!companyRequestIntentHandlers[intent]) {
+    return data({ error: "Unknown action", success: null }, { status: 400 });
   }
 
-  if (intent === "reject") {
-    const rejectionNote = String(form.get("rejectionNote") ?? "").trim();
-    const result = await rejectCompanyRequest(env, requestId, rejectionNote);
-    if (result.error) {
-      return data({ error: result.error, success: null }, { status: 400 });
-    }
-
-    if (result.request) {
-      sendCompanyRejectedEmail(env, {
-        to: result.request.owner_email,
-        ownerName: result.request.owner_name,
-        companyName: result.request.company_name,
-        note: rejectionNote || null,
-      }).catch(console.error);
-    }
-
-    return data({ success: "Request rejected", error: null });
-  }
-
-  return data({ error: "Unknown action", success: null }, { status: 400 });
+  return dispatchIntent(intent, companyRequestIntentHandlers, {
+    request,
+    form,
+    env: context.cloudflare.env,
+    params: {},
+  });
 }
 
 export default function AdminCompanyRequestsPage() {

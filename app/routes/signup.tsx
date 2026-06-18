@@ -5,7 +5,9 @@ import {
   sendCompanyRequestConfirmationEmail,
   sendCompanyRequestSuperAdminEmail,
 } from "~/lib/email.server";
+import { fireAndForgetEmail } from "~/lib/email/send-async.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
+import { getTrimmedString, getLowercaseEmail } from "~/lib/validation/form-data";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -26,10 +28,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env;
   const form = await request.formData();
 
-  const companyName = String(form.get("companyName") ?? "").trim();
-  const slug = String(form.get("slug") ?? "").trim().toLowerCase();
-  const ownerName = String(form.get("ownerName") ?? "").trim();
-  const ownerEmail = String(form.get("ownerEmail") ?? "").trim().toLowerCase();
+  const companyName = getTrimmedString(form, "companyName");
+  const slug = getTrimmedString(form, "slug").toLowerCase();
+  const ownerName = getTrimmedString(form, "ownerName");
+  const ownerEmail = getLowercaseEmail(form, "ownerEmail");
 
   const result = await submitCompanyRequest(env, {
     companyName,
@@ -45,18 +47,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
 
-  sendCompanyRequestConfirmationEmail(env, {
-    to: ownerEmail,
-    ownerName,
-    companyName,
-  }).catch(console.error);
+  fireAndForgetEmail(
+    sendCompanyRequestConfirmationEmail(env, { to: ownerEmail, ownerName, companyName }),
+    "company_request_confirmation",
+    { email: ownerEmail }
+  );
 
-  sendCompanyRequestSuperAdminEmail(env, {
-    companyName,
-    slug,
-    ownerName,
-    ownerEmail,
-  }).catch(console.error);
+  fireAndForgetEmail(
+    sendCompanyRequestSuperAdminEmail(env, { companyName, slug, ownerName, ownerEmail }),
+    "company_request_superadmin",
+    { company: companyName }
+  );
 
   return data({ submitted: true, errors: null, values: null });
 }

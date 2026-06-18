@@ -1,7 +1,6 @@
 import { data, Form, redirect, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.settings";
-import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
-import { createSupabaseServerClient } from "~/lib/supabase.server";
+import { requireChildLoaderAuth } from "~/lib/auth.server";
 import type { Tenant } from "~/types/app";
 import type { TenantOutletContext } from "./$slug";
 import { getPlan } from "~/lib/plans";
@@ -10,6 +9,9 @@ import { Button } from "~/components/Button";
 import { FormField } from "~/components/FormField";
 import { FlashMessage } from "~/components/FlashMessage";
 import { isHR } from "~/lib/roles";
+import { dispatchIntent } from "~/lib/actions/intent-handler.server";
+import { settingsIntentHandlers } from "~/lib/actions/settings/handlers.server";
+import { getIntent } from "~/lib/validation/form-data";
 
 export function meta() {
   return [{ title: "Settings — Glacia HRMS" }];
@@ -25,70 +27,23 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
-  const slug = params.slug!;
-  const env = context.cloudflare.env;
-  const { profile, tenant } = await requireHR(request, env, slug);
-  const { supabase } = createSupabaseServerClient(request, env);
   const form = await request.formData();
-  const intent = String(form.get("intent"));
+  const intent = getIntent(form);
 
-  if (intent === "update_company") {
-    const name = String(form.get("name") ?? "").trim();
-    const accentColor = String(form.get("accentColor") ?? "#38bdf8");
-    const accentDark = String(form.get("accentDark") ?? "#0ea5e9");
-
-    if (!name) return data({ error: "Company name is required", intent, success: null, logoUrl: null }, { status: 400 });
-
-    const { error } = await supabase
-      .from("tenants")
-      .update({ name, theme: { accent: accentColor, accentDark } })
-      .eq("id", tenant.id);
-
-    if (error) return data({ error: error.message, intent, success: null, logoUrl: null }, { status: 500 });
-    return data({ success: "Company settings updated", intent, error: null, logoUrl: null });
+  if (!settingsIntentHandlers[intent]) {
+    return data({ error: "Unknown action", intent, success: null, logoUrl: null }, { status: 400 });
   }
 
-  if (intent === "upload_logo") {
-    const file = form.get("logo") as File | null;
-    if (!file || file.size === 0) return data({ error: "Please select a logo file", intent, success: null, logoUrl: null }, { status: 400 });
-    if (file.size > 2 * 1024 * 1024) return data({ error: "Logo must be under 2 MB", intent, success: null, logoUrl: null }, { status: 400 });
-    if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type)) {
-      return data({ error: "Only PNG, JPEG, WebP, or SVG allowed", intent, success: null, logoUrl: null }, { status: 400 });
-    }
-
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `${tenant.id}/logo.${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
-
-    const { error: uploadError } = await supabase.storage
-      .from("tenant-logos")
-      .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
-
-    if (uploadError) return data({ error: uploadError.message, intent, success: null, logoUrl: null }, { status: 500 });
-
-    const { data: urlData } = supabase.storage.from("tenant-logos").getPublicUrl(path);
-    const logoUrl = urlData.publicUrl + `?t=${Date.now()}`;
-
-    await supabase.from("tenants").update({ logo_url: logoUrl }).eq("id", tenant.id);
-    return data({ success: "Logo updated", intent, error: null, logoUrl });
-  }
-
-  if (intent === "remove_logo") {
-    await supabase.from("tenants").update({ logo_url: null }).eq("id", tenant.id);
-    return data({ success: "Logo removed", intent, error: null, logoUrl: null });
-  }
-
-  if (intent === "toggle_gps") {
-    const gpsRequired = form.get("gps_required") === "true";
-    await supabase.from("tenants").update({ gps_required: gpsRequired }).eq("id", tenant.id);
-    return data({ success: `GPS attendance ${gpsRequired ? "enabled" : "disabled"}`, intent, error: null, logoUrl: null });
-  }
-
-  return data({ error: "Unknown action", intent, success: null, logoUrl: null }, { status: 400 });
+  return dispatchIntent(intent, settingsIntentHandlers, {
+    request,
+    form,
+    env: context.cloudflare.env,
+    params,
+  });
 }
 
 export default function SettingsPage() {
-  const { profile, tenant } = useOutletContext<TenantOutletContext>();
+  const { tenant } = useOutletContext<TenantOutletContext>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";

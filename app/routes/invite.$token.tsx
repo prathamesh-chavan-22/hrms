@@ -5,6 +5,8 @@ import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
 import { IcyCard, IcyCardBody } from "~/components/IcyCard";
+import { getTrimmedString, getString } from "~/lib/validation/form-data";
+import { validatePasswordConfirmation } from "~/lib/validation/password";
 
 export function meta() {
   return [{ title: "Accept Invitation — Glacia HRMS" }];
@@ -21,14 +23,17 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export async function action({ params, request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env;
   const form = await request.formData();
-  const fullName = String(form.get("fullName") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-  const confirmPassword = String(form.get("confirmPassword") ?? "");
+  const fullName = getTrimmedString(form, "fullName");
+  const password = getString(form, "password");
+  const confirmPassword = getString(form, "confirmPassword");
 
   const errors: Record<string, string> = {};
   if (!fullName) errors.fullName = "Full name is required";
-  if (password.length < 8) errors.password = "Password must be at least 8 characters";
-  if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match";
+  const passwordError = validatePasswordConfirmation(password, confirmPassword);
+  if (passwordError) {
+    if (passwordError.includes("match")) errors.confirmPassword = passwordError;
+    else errors.password = passwordError;
+  }
 
   if (Object.keys(errors).length > 0) {
     return data({ errors }, { status: 400 });

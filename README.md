@@ -35,6 +35,9 @@ BILLING_ENABLED=false
 | `RESEND_API_KEY` | Resend API key for transactional email |
 | `APP_BASE_URL` | Public base URL for links in emails and redirects |
 | `BILLING_ENABLED` | Set to `true` when Razorpay billing is live; `false` during beta |
+| `SUPER_ADMIN_EMAIL` | Email address for super-admin company request review |
+
+Copy [.dev.vars.example](.dev.vars.example) to `.dev.vars` and fill in your values.
 
 Production secrets are set via Wrangler (`wrangler secret put …`) or the Cloudflare dashboard. Non-secret defaults live in `wrangler.json` under `vars`.
 
@@ -45,6 +48,9 @@ SQL migrations live in `supabase/migrations/`:
 1. `001_initial_schema.sql` — tenants, profiles, attendance, leave, holidays, RLS policies
 2. `002_seed_defaults.sql` — default leave types and national holidays
 3. `003_storage.sql` — logo upload bucket and policies
+4. `004_protect_profile_privileged_columns.sql` — RLS hardening for profile columns
+5. `005_password_management.sql` — password reset requests and must-change-password flag
+6. `006_company_requests.sql` — company signup approval workflow
 
 Apply with the [Supabase CLI](https://supabase.com/docs/guides/cli):
 
@@ -72,13 +78,22 @@ Regenerate Cloudflare binding types and React Router route types:
 npm run cf-typegen
 ```
 
+## Verification
+
+```bash
+npm run cf-typegen     # regenerate Cloudflare + route types
+npm run typecheck      # TypeScript project references
+npm run lint           # ESLint
+npm run test           # Vitest unit tests
+npm run check          # typecheck + build + wrangler dry-run
+```
+
 ## Build & deploy
 
 ```bash
 npm run build          # production build
 npm run preview        # build + local preview
 npm run deploy         # deploy to Cloudflare Workers
-npm run check          # typecheck + build + wrangler dry-run
 ```
 
 Preview deployments:
@@ -103,12 +118,21 @@ Opens an interactive treemap (`stats.html`) after build. Client chunks are split
 ```
 app/
   routes/          # React Router file-based routes
-  components/      # Shared UI
-  lib/             # Server utilities (auth, Supabase, email, attendance)
+  components/      # Shared UI (attendance/, dashboard/, employees/)
+  lib/
+    auth/          # Session guards, invites, passwords, company requests
+    actions/       # Intent handler registries
+    services/      # Business logic
+    repositories/  # Supabase data access
+    validation/    # FormData and password rules
+    email/         # Transactional email templates
 workers/app.ts     # Cloudflare Worker entry
+docs/architecture.md
 supabase/migrations/
 wrangler.json      # Worker config and public vars
 ```
+
+See [docs/architecture.md](docs/architecture.md) for request flow and module boundaries.
 
 ## License
 

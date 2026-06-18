@@ -5,7 +5,8 @@ import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { ChatbotIntent } from "~/types/app";
 import type { TenantOutletContext } from "./$slug";
 import { useState, useRef, useEffect } from "react";
-import { todayIST } from "~/lib/dates";
+import { resolveChatReply } from "~/lib/chat/handlers.server";
+import { getTrimmedString } from "~/lib/validation/form-data";
 
 export function meta() {
   return [{ title: "Assistant — Glacia HRMS" }];
@@ -24,7 +25,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const { profile, tenant } = await requireTenantAccess(request, env, slug);
   const { supabase } = createSupabaseServerClient(request, env);
   const form = await request.formData();
-  const message = String(form.get("message") ?? "").trim().toLowerCase();
+  const message = getTrimmedString(form, "message").toLowerCase();
 
   if (!message) return data({ reply: null, error: "Empty message" });
 
@@ -35,54 +36,18 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     .eq("is_active", true)
     .order("priority", { ascending: false });
 
-  let reply = "I'm not sure how to answer that. Try asking about your leave balance, upcoming holidays, or attendance.";
+  let reply =
+    "I'm not sure how to answer that. Try asking about your leave balance, upcoming holidays, or attendance.";
 
   for (const intent of (intents ?? []) as ChatbotIntent[]) {
-    const matched = intent.patterns.some((pattern) =>
-      message.includes(pattern.toLowerCase())
-    );
+    const matched = intent.patterns.some((pattern) => message.includes(pattern.toLowerCase()));
     if (!matched) continue;
 
-    if (intent.query_type === "leave_balance") {
-      const { data: leaveTypes } = await supabase
-        .from("leave_types")
-        .select("name, code, days_per_year")
-        .eq("tenant_id", tenant.id);
-      const list = (leaveTypes ?? [])
-        .map((lt) => `${lt.name} (${lt.code}): ${lt.days_per_year} days/year`)
-        .join(", ");
-      reply = `Your company leave types: ${list || "None configured yet."}`;
-    } else if (intent.query_type === "holidays") {
-      const { data: holidays } = await supabase
-        .from("holidays")
-        .select("name, date")
-        .eq("tenant_id", tenant.id)
-        .gte("date", todayIST())
-        .order("date")
-        .limit(5);
-      const list = (holidays ?? [])
-        .map((h) => `${h.name} on ${new Date(h.date).toLocaleDateString("en-IN")}`)
-        .join("; ");
-      reply = `Upcoming holidays: ${list || "None scheduled."}`;
-    } else if (intent.query_type === "attendance_today") {
-      const today = todayIST();
-      const { data: att } = await supabase
-        .from("attendance")
-        .select("punch_in_at, punch_out_at")
-        .eq("tenant_id", tenant.id)
-        .eq("user_id", profile.id)
-        .eq("date", today)
-        .single();
-      if (!att) {
-        reply = "You haven't punched in today.";
-      } else {
-        const inTime = att.punch_in_at ? new Date(att.punch_in_at).toLocaleTimeString("en-IN") : "—";
-        const outTime = att.punch_out_at ? new Date(att.punch_out_at).toLocaleTimeString("en-IN") : "not yet";
-        reply = `Today: Punch in ${inTime}, Punch out ${outTime}.`;
-      }
-    } else {
-      reply = intent.response;
-    }
+    reply = await resolveChatReply(intent.query_type, intent.response, {
+      supabase,
+      profile,
+      tenant,
+    });
     break;
   }
 

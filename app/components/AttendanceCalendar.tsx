@@ -26,21 +26,7 @@ const MONTHS = [
   "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
 ];
 
-const STATUS_COLORS: Record<DayMarker["kind"], string> = {
-  present: "var(--ok)",
-  half_day: "var(--warn)",
-  absent: "var(--err)",
-  wfh: "var(--accent)",
-  holiday: "var(--accent-dark)",
-};
-
-const STATUS_LABELS: Record<DayMarker["kind"], string> = {
-  present: "PRESENT",
-  half_day: "HALF DAY",
-  absent: "ABSENT",
-  wfh: "WFH",
-  holiday: "HOLIDAY",
-};
+import { STATUS_COLORS, STATUS_LABELS } from "~/lib/attendance-status";
 
 export function AttendanceCalendar({
   markers,
@@ -56,6 +42,7 @@ export function AttendanceCalendar({
 
   // Sync local state when loader provides new year/month after navigation
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync controlled calendar month from loader
     if (initialYear != null) setViewYear(initialYear);
     if (initialMonth != null) setViewMonth(initialMonth);
   }, [initialYear, initialMonth]);

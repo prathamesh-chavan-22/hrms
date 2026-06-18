@@ -6,6 +6,8 @@ import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
 import { IcyCard, IcyCardBody } from "~/components/IcyCard";
+import { getString } from "~/lib/validation/form-data";
+import { validatePasswordConfirmation } from "~/lib/validation/password";
 
 export function meta() {
   return [{ title: "Change Password — Glacia HRMS" }];
@@ -37,12 +39,15 @@ export async function action({ request, context }: Route.ActionArgs) {
   const { supabase, cookies, user } = await requireUser(request, env);
   const form = await request.formData();
 
-  const newPassword = String(form.get("newPassword") ?? "");
-  const confirmPassword = String(form.get("confirmPassword") ?? "");
+  const newPassword = getString(form, "newPassword");
+  const confirmPassword = getString(form, "confirmPassword");
 
   const errors: Record<string, string> = {};
-  if (newPassword.length < 8) errors.newPassword = "Password must be at least 8 characters";
-  if (newPassword !== confirmPassword) errors.confirmPassword = "Passwords do not match";
+  const passwordError = validatePasswordConfirmation(newPassword, confirmPassword);
+  if (passwordError) {
+    if (passwordError.includes("match")) errors.confirmPassword = passwordError;
+    else errors.newPassword = passwordError;
+  }
 
   if (Object.keys(errors).length > 0) {
     return data({ errors }, { status: 400 });
