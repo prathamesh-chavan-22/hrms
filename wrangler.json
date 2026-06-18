@@ -4,6 +4,9 @@
 	"main": "./workers/app.ts",
 	"compatibility_date": "2025-10-08",
 	"compatibility_flags": ["nodejs_compat"],
+	"dev": {
+		"port": 5173
+	},
 	"observability": {
 		"enabled": true
 	},
