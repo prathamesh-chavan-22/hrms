@@ -15,6 +15,8 @@ export default [
   route("signup", "routes/signup.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
+  route("change-password", "routes/change-password.tsx"),
+  route("forgot-password", "routes/forgot-password.tsx"),
   route("invite/:token", "routes/invite.$token.tsx"),
 
   // Tenant-scoped (guarded by layout)

@@ -35,6 +35,7 @@ export interface Database {
           date_of_joining: string | null;
           status: "active" | "inactive" | "invited";
           avatar_url: string | null;
+          must_change_password: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -173,6 +174,24 @@ export interface Database {
           response: string;
         };
         Update: Partial<Database["public"]["Tables"]["chatbot_intents"]["Row"]>;
+      };
+      password_reset_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          tenant_id: string | null;
+          email: string;
+          escalation: "super_admin" | "company_admin";
+          status: string;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["password_reset_requests"]["Row"]> & {
+          user_id: string;
+          email: string;
+          escalation: "super_admin" | "company_admin";
+        };
+        Update: Partial<Database["public"]["Tables"]["password_reset_requests"]["Row"]>;
       };
     };
     Functions: {

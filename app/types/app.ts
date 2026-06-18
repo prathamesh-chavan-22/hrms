@@ -29,6 +29,7 @@ export interface Profile {
   date_of_joining: string | null;
   status: EmployeeStatus;
   avatar_url: string | null;
+  must_change_password: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,4 @@
-import { Outlet, useLoaderData, data } from "react-router";
+import { Outlet, useLoaderData, data, redirect } from "react-router";
 import type { Route } from "./+types/$slug";
 import { requireTenantAccess } from "~/lib/auth.server";
 import { appendCookieHeaders } from "~/lib/supabase.server";
@@ -18,6 +18,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     context.cloudflare.env,
     slug
   );
+
+  if (profile.must_change_password) {
+    throw redirect("/change-password");
+  }
 
   const headers = appendCookieHeaders(new Headers(), cookies);
   return data({ profile, tenant, slug }, { headers });

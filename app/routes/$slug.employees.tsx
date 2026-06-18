@@ -1,16 +1,16 @@
 import { data, redirect, Form, useLoaderData, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.employees";
-import { requireHR, requireChildLoaderAuth } from "~/lib/auth.server";
+import { requireHR, requireChildLoaderAuth, createEmployeeAccount, resetEmployeePassword } from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { TenantOutletContext } from "./$slug";
-import { sendInviteEmail } from "~/lib/email.server";
+import { sendAccountCreatedEmail } from "~/lib/email.server";
 import { canAddEmployee, getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Badge, roleBadge, statusBadge } from "~/components/Badge";
 import { Button } from "~/components/Button";
 import { FormField, SelectField } from "~/components/FormField";
 import { FlashMessage } from "~/components/FlashMessage";
-import { isHR, inviteRoleOptions, isInvitableRole } from "~/lib/roles";
+import { isHR, inviteRoleOptions, isInvitableRole, canResetPassword } from "~/lib/roles";
 import { useState } from "react";
 
 export function meta() {
@@ -26,18 +26,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     throw redirect(`/${slug}/dashboard`);
   }
 
-  const [employeesRes, invitesRes, countRes] = await Promise.all([
+  const [employeesRes, countRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, email, role, status, department, designation, employee_code, date_of_joining, created_at")
+      .select("id, full_name, email, role, status, department, designation, employee_code, date_of_joining, created_at, must_change_password")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("invites")
-      .select("id, email, role, expires_at, accepted_at, created_at")
-      .eq("tenant_id", tenantId)
-      .is("accepted_at", null)
-      .gt("expires_at", new Date().toISOString()),
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -46,7 +40,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   return data({
     employees: employeesRes.data ?? [],
-    pendingInvites: invitesRes.data ?? [],
     totalCount: countRes.count ?? 0,
   });
 }
@@ -59,38 +52,21 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const intent = String(form.get("intent"));
 
-  if (intent === "invite") {
+  if (intent === "create") {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
+    const fullName = String(form.get("fullName") ?? "").trim();
     const rawRole = String(form.get("role") ?? "employee");
-
-    // #region agent log
-    fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
-      body: JSON.stringify({
-        sessionId: "05651e",
-        runId: "post-fix",
-        hypothesisId: "H1",
-        location: "$slug.employees.tsx:invite-entry",
-        message: "invite role parsed from form",
-        data: {
-          rawRole,
-          inviterRole: profile.role,
-          allowedRoles: inviteRoleOptions(profile.role).map((o) => o.value),
-          passesWhitelist: isInvitableRole(rawRole, profile.role),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    const password = String(form.get("password") ?? "");
 
     if (!isInvitableRole(rawRole, profile.role)) {
-      return data({ error: "Invalid role for invite", intent, success: null }, { status: 403 });
+      return data({ error: "Invalid role", intent, success: null }, { status: 403 });
     }
 
     const role = rawRole;
 
     if (!email) return data({ error: "Email is required", intent, success: null }, { status: 400 });
+    if (!fullName) return data({ error: "Full name is required", intent, success: null }, { status: 400 });
+    if (password.length < 8) return data({ error: "Password must be at least 8 characters", intent, success: null }, { status: 400 });
 
     const { count } = await supabase
       .from("profiles")
@@ -106,65 +82,55 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       }, { status: 400 });
     }
 
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("tenant_id", tenant.id)
-      .eq("email", email)
-      .single();
-
-    if (existing) return data({ error: "This email is already a team member", intent, success: null }, { status: 400 });
-
-    const { data: invite, error: inviteError } = await supabase
-      .from("invites")
-      .insert({ tenant_id: tenant.id, email, role, invited_by: profile.id })
-      .select()
-      .single();
-
-    if (inviteError || !invite) {
-      // #region agent log
-      fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
-        body: JSON.stringify({
-          sessionId: "05651e",
-        runId: "post-fix",
-        hypothesisId: "H2",
-        location: "$slug.employees.tsx:invite-insert-failed",
-          message: "invite insert failed",
-          data: { requestedRole: role, error: inviteError?.message ?? null },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-      return data({ error: inviteError?.message ?? "Failed to create invite", intent, success: null }, { status: 500 });
-    }
-
-    // #region agent log
-    fetch("http://127.0.0.1:7468/ingest/87e859e7-e90d-405f-9d7b-f36f2924a713", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05651e" },
-      body: JSON.stringify({
-        sessionId: "05651e",
-        runId: "post-fix",
-        hypothesisId: "H2",
-        location: "$slug.employees.tsx:invite-insert-success",
-        message: "invite stored in database",
-        data: { requestedRole: role, storedRole: invite.role, inviteId: invite.id },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    await sendInviteEmail(env, {
-      to: email,
-      invitedByName: profile.full_name,
-      companyName: tenant.name,
+    const result = await createEmployeeAccount(env, {
+      tenantId: tenant.id,
+      email,
+      fullName,
       role,
-      inviteToken: invite.token,
+      password,
+      tenantPlan: tenant.plan,
     });
 
-    return data({ success: `Invite sent to ${email}`, intent, error: null });
+    if (result.error) {
+      return data({ error: result.error, intent, success: null }, { status: 400 });
+    }
+
+    await sendAccountCreatedEmail(env, {
+      to: email,
+      fullName,
+      companyName: tenant.name,
+      temporaryPassword: password,
+    }).catch(console.error);
+
+    return data({ success: `Account created for ${fullName}. They must change their password on first login.`, intent, error: null });
+  }
+
+  if (intent === "reset_password") {
+    if (!canResetPassword(profile.role)) {
+      return data({ error: "Only owner and admin can reset passwords", intent, success: null }, { status: 403 });
+    }
+
+    const userId = String(form.get("userId"));
+    const newPassword = String(form.get("newPassword") ?? "");
+
+    if (userId === profile.id) {
+      return data({ error: "Use account settings to change your own password", intent, success: null }, { status: 400 });
+    }
+    if (newPassword.length < 8) {
+      return data({ error: "Password must be at least 8 characters", intent, success: null }, { status: 400 });
+    }
+
+    const result = await resetEmployeePassword(env, {
+      userId,
+      tenantId: tenant.id,
+      newPassword,
+    });
+
+    if (result.error) {
+      return data({ error: result.error, intent, success: null }, { status: 400 });
+    }
+
+    return data({ success: "Password reset. Employee must change it on next login.", intent, error: null });
   }
 
   if (intent === "deactivate") {
@@ -187,20 +153,21 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
 export default function EmployeesPage() {
   const { profile, tenant } = useOutletContext<TenantOutletContext>();
-  const { employees, pendingInvites, totalCount } = useLoaderData<typeof loader>();
+  const { employees, totalCount } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
 
   const plan = getPlan(tenant.plan);
   const atCap = totalCount >= plan.maxEmployees;
   const roleOptions = inviteRoleOptions(profile.role);
   const canChooseRole = roleOptions.length > 1;
+  const canReset = canResetPassword(profile.role);
 
   return (
     <div className="p-5 lg:p-7 space-y-5">
-      {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <p className="eyebrow mb-2">EMPLOYEES</p>
@@ -208,15 +175,14 @@ export default function EmployeesPage() {
           <p className="eyebrow mt-2 tnum">{totalCount} OF {plan.maxEmployees} ON {plan.name.toUpperCase()} PLAN</p>
         </div>
         <Button
-          onClick={() => setShowInviteForm((v) => !v)}
+          onClick={() => setShowCreateForm((v) => !v)}
           disabled={atCap}
           title={atCap ? `Plan limit reached (${plan.maxEmployees})` : undefined}
         >
-          + Invite Employee
+          + Add Employee
         </Button>
       </div>
 
-      {/* Flash messages */}
       <FlashMessage message={actionData?.success} variant="success" />
       <FlashMessage message={actionData?.error} variant="error" />
       {atCap && (
@@ -225,22 +191,34 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* Invite Form */}
-      {showInviteForm && (
+      {showCreateForm && (
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="eyebrow">SEND INVITE</h2>
+            <h2 className="eyebrow">CREATE EMPLOYEE ACCOUNT</h2>
           </IcyCardHeader>
           <IcyCardBody>
-            <Form method="post" className="flex flex-col sm:flex-row gap-4 items-end">
-              <input type="hidden" name="intent" value="invite" />
+            <Form method="post" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input type="hidden" name="intent" value="create" />
+              <FormField
+                label="Full Name"
+                name="fullName"
+                placeholder="Jane Doe"
+                required
+              />
               <FormField
                 label="Email Address"
                 name="email"
                 type="email"
                 placeholder="employee@company.com"
                 required
-                className="flex-1"
+              />
+              <FormField
+                label="Temporary Password"
+                name="password"
+                type="password"
+                placeholder="Min. 8 characters"
+                required
+                autoComplete="new-password"
               />
               {canChooseRole ? (
                 <SelectField
@@ -248,47 +226,54 @@ export default function EmployeesPage() {
                   name="role"
                   defaultValue="employee"
                   options={roleOptions}
-                  className="w-40"
                 />
               ) : (
                 <input type="hidden" name="role" value="employee" />
               )}
-              <Button type="submit" loading={isSubmitting} className="mb-0.5">
-                Send Invite
-              </Button>
+              <div className="sm:col-span-2 flex gap-3">
+                <Button type="submit" loading={isSubmitting}>
+                  Create Account
+                </Button>
+                <p className="text-xs text-ink-2 self-center">
+                  Employee will be prompted to change password on first login.
+                </p>
+              </div>
             </Form>
           </IcyCardBody>
         </IcyCard>
       )}
 
-      {/* Pending invites */}
-      {pendingInvites.length > 0 && (
+      {resetUserId && (
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="eyebrow tnum">PENDING INVITES ({pendingInvites.length})</h2>
+            <h2 className="eyebrow">RESET PASSWORD</h2>
           </IcyCardHeader>
-          <IcyCardBody className="p-0">
-            <ul>
-              {pendingInvites.map((inv) => (
-                <li key={inv.id} className="px-5 py-3 flex items-center justify-between rule-dashed first:border-t-0">
-                  <div>
-                    <p className="text-sm font-bold text-ink">{inv.email}</p>
-                    <p className="eyebrow mt-0.5">
-                      EXPIRES {new Date(inv.expires_at).toLocaleDateString("en-IN")}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge variant="yellow" size="sm">{inv.role}</Badge>
-                    <Badge variant="slate" size="sm">Pending</Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <IcyCardBody>
+            <Form method="post" className="flex flex-col sm:flex-row gap-4 items-end">
+              <input type="hidden" name="intent" value="reset_password" />
+              <input type="hidden" name="userId" value={resetUserId} />
+              <FormField
+                label="New Temporary Password"
+                name="newPassword"
+                type="password"
+                placeholder="Min. 8 characters"
+                required
+                autoComplete="new-password"
+                className="flex-1"
+              />
+              <div className="flex gap-2 mb-0.5">
+                <Button type="submit" loading={isSubmitting}>
+                  Reset Password
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setResetUserId(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </Form>
           </IcyCardBody>
         </IcyCard>
       )}
 
-      {/* Employee table */}
       <IcyCard>
         <IcyCardHeader>
           <h2 className="eyebrow">ALL EMPLOYEES</h2>
@@ -296,7 +281,7 @@ export default function EmployeesPage() {
         <div className="overflow-x-auto">
           {employees.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-ink-2">No employees yet. Invite your first team member.</p>
+              <p className="text-ink-2">No employees yet. Add your first team member.</p>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -321,6 +306,11 @@ export default function EmployeesPage() {
                         <div>
                           <p className="font-bold text-ink">{emp.full_name}</p>
                           <p className="eyebrow mt-0.5 normal-case tracking-normal lowercase">{emp.email}</p>
+                          {emp.must_change_password && (
+                            <p className="text-xs font-mono mt-0.5" style={{ color: "var(--warn)" }}>
+                              pending first login
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -338,17 +328,28 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-5 py-3">
                       {emp.id !== profile.id && (
-                        <Form method="post">
-                          <input type="hidden" name="userId" value={emp.id} />
-                          <input type="hidden" name="intent" value={emp.status === "active" ? "deactivate" : "activate"} />
-                          <button
-                            type="submit"
-                            className="eyebrow hover:underline"
-                            style={{ color: emp.status === "active" ? "var(--err)" : "var(--ok)" }}
-                          >
-                            {emp.status === "active" ? "DEACTIVATE" : "ACTIVATE"}
-                          </button>
-                        </Form>
+                        <div className="flex flex-col gap-1 items-end">
+                          {canReset && emp.role !== "owner" && (
+                            <button
+                              type="button"
+                              onClick={() => setResetUserId(emp.id)}
+                              className="eyebrow hover:underline text-accent-dark"
+                            >
+                              RESET PW
+                            </button>
+                          )}
+                          <Form method="post">
+                            <input type="hidden" name="userId" value={emp.id} />
+                            <input type="hidden" name="intent" value={emp.status === "active" ? "deactivate" : "activate"} />
+                            <button
+                              type="submit"
+                              className="eyebrow hover:underline"
+                              style={{ color: emp.status === "active" ? "var(--err)" : "var(--ok)" }}
+                            >
+                              {emp.status === "active" ? "DEACTIVATE" : "ACTIVATE"}
+                            </button>
+                          </Form>
+                        </div>
                       )}
                     </td>
                   </tr>

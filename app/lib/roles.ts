@@ -8,6 +8,11 @@ export function isOwner(role: string): boolean {
   return role === "owner";
 }
 
+/** Only owner and admin may reset another user's password after first login. */
+export function canResetPassword(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
 type InvitableRole = Exclude<UserRole, "owner">;
 
 const INVITE_ROLE_LABELS: Record<InvitableRole, string> = {

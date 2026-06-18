@@ -1,7 +1,7 @@
 import { data, redirect, Form, useActionData, useNavigation, Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/login";
 import { createSupabaseServerClient, appendCookieHeaders } from "~/lib/supabase.server";
-import { resolveRedirectAfterLogin } from "~/lib/auth.server";
+import { resolveRedirectAfterLogin, getLoginRedirect } from "~/lib/auth.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -41,15 +41,19 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tenant_id, tenant:tenants(slug)")
+    .select("must_change_password, tenant:tenants(slug)")
     .eq("id", user.id)
     .single();
 
-  const slug = (profile as unknown as { tenant: { slug: string } } | null)?.tenant?.slug;
+  const tenant = (profile as unknown as { tenant: { slug: string } | null })?.tenant;
+  const redirectTo = getLoginRedirect({
+    must_change_password: profile?.must_change_password,
+    tenant,
+  });
   const headers = appendCookieHeaders(new Headers(), cookies);
 
-  if (slug) {
-    headers.set("Location", `/${slug}/dashboard`);
+  if (redirectTo) {
+    headers.set("Location", redirectTo);
     return new Response(null, { status: 302, headers });
   }
 
@@ -119,6 +123,12 @@ export default function LoginPage() {
                 Sign In
               </Button>
             </Form>
+
+            <p className="mt-4 text-center">
+              <Link to="/forgot-password" className="font-mono font-bold text-accent-dark hover:underline uppercase text-xs tracking-wide">
+                Forgot password?
+              </Link>
+            </p>
 
             <p className="mt-6 text-sm text-ink-2">
               New to Glacia?{" "}

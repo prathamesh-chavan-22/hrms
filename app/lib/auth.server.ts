@@ -88,13 +88,17 @@ export async function resolveRedirectAfterLogin(request: Request, env: Env) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tenant_id, tenant:tenants(slug)")
+    .select("must_change_password, tenant:tenants(slug)")
     .eq("id", user.id)
     .single();
 
   if (!profile) return { user, cookies, redirectTo: null };
-  const slug = (profile as unknown as { tenant: { slug: string } }).tenant?.slug;
-  return { user, cookies, redirectTo: slug ? `/${slug}/dashboard` : null };
+  const tenant = (profile as unknown as { tenant: { slug: string } | null }).tenant;
+  const redirectTo = getLoginRedirect({
+    must_change_password: profile.must_change_password,
+    tenant,
+  });
+  return { user, cookies, redirectTo };
 }
 
 export async function createTenantWithOwner(
@@ -225,4 +229,167 @@ export async function acceptInvite(
   }
 
   return { success: true, email: invite.email };
+}
+
+export async function createEmployeeAccount(
+  env: Env,
+  params: {
+    tenantId: string;
+    email: string;
+    fullName: string;
+    role: string;
+    password: string;
+    tenantPlan: string;
+  }
+) {
+  const service = createSupabaseServiceClient(env);
+
+  const { count } = await service
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", params.tenantId);
+
+  if (!canAddEmployee(params.tenantPlan, count ?? 0)) {
+    return { error: "This company has reached its plan limit." };
+  }
+
+  const { data: existing } = await service
+    .from("profiles")
+    .select("id")
+    .eq("tenant_id", params.tenantId)
+    .eq("email", params.email)
+    .single();
+
+  if (existing) return { error: "This email is already a team member" };
+
+  const { data: authData, error: authError } = await service.auth.admin.createUser({
+    email: params.email,
+    password: params.password,
+    email_confirm: true,
+    user_metadata: { full_name: params.fullName },
+  });
+
+  if (authError || !authData.user) {
+    return { error: authError?.message ?? "Failed to create account" };
+  }
+
+  const { error: profileError } = await service.from("profiles").insert({
+    id: authData.user.id,
+    tenant_id: params.tenantId,
+    role: params.role,
+    full_name: params.fullName,
+    email: params.email,
+    status: "active",
+    must_change_password: true,
+  });
+
+  if (profileError) {
+    await service.auth.admin.deleteUser(authData.user.id);
+    return { error: profileError.message };
+  }
+
+  return { success: true, userId: authData.user.id };
+}
+
+export async function resetEmployeePassword(
+  env: Env,
+  params: { userId: string; tenantId: string; newPassword: string }
+) {
+  const service = createSupabaseServiceClient(env);
+
+  const { data: profile } = await service
+    .from("profiles")
+    .select("id, role")
+    .eq("id", params.userId)
+    .eq("tenant_id", params.tenantId)
+    .single();
+
+  if (!profile) return { error: "Employee not found" };
+  if (profile.role === "owner") return { error: "Cannot reset the company owner's password from here" };
+
+  const { error: authError } = await service.auth.admin.updateUserById(params.userId, {
+    password: params.newPassword,
+  });
+
+  if (authError) return { error: authError.message };
+
+  const { error: profileError } = await service
+    .from("profiles")
+    .update({ must_change_password: true })
+    .eq("id", params.userId);
+
+  if (profileError) return { error: profileError.message };
+
+  return { success: true };
+}
+
+export async function completeFirstLoginPasswordChange(
+  env: Env,
+  userId: string,
+  newPassword: string
+) {
+  const service = createSupabaseServiceClient(env);
+
+  const { error: authError } = await service.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+
+  if (authError) return { error: authError.message };
+
+  const { error: profileError } = await service
+    .from("profiles")
+    .update({ must_change_password: false })
+    .eq("id", userId);
+
+  if (profileError) return { error: profileError.message };
+
+  return { success: true };
+}
+
+export async function submitPasswordResetRequest(env: Env, email: string) {
+  const service = createSupabaseServiceClient(env);
+
+  const { data: profile } = await service
+    .from("profiles")
+    .select("id, role, full_name, email, tenant_id, tenant:tenants(name, slug)")
+    .eq("email", email)
+    .single();
+
+  if (!profile) {
+    // Always succeed silently to avoid email enumeration
+    return { success: true, escalated: null as null };
+  }
+
+  const isOwner = profile.role === "owner";
+  const escalation = isOwner ? "super_admin" : "company_admin";
+
+  await service.from("password_reset_requests").insert({
+    user_id: profile.id,
+    tenant_id: profile.tenant_id,
+    email: profile.email,
+    escalation,
+  });
+
+  return {
+    success: true,
+    escalated: escalation,
+    profile: profile as {
+      id: string;
+      role: string;
+      full_name: string;
+      email: string;
+      tenant_id: string;
+      tenant: { name: string; slug: string } | null;
+    },
+  };
+}
+
+export function getLoginRedirect(profile: {
+  must_change_password?: boolean;
+  tenant?: { slug: string } | null;
+} | null): string | null {
+  if (!profile) return null;
+  if (profile.must_change_password) return "/change-password";
+  const slug = profile.tenant?.slug;
+  return slug ? `/${slug}/dashboard` : null;
 }
