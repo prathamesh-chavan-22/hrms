@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "~/lib/supabase.server";
 import {
   punchIn,
   punchOut,
-  requireValidCoords,
+  normalizeGpsSubmission,
   setAttendanceStatus,
 } from "~/lib/attendance.server";
 import { profileExistsInTenant } from "~/lib/repositories/profiles.repository";
@@ -22,20 +22,23 @@ async function getAttendanceContext(ctx: Parameters<IntentHandler>[0]) {
 export const punchInHandler: IntentHandler = async (ctx) => {
   const intent = "punch_in";
   const { profile, tenant, supabase } = await getAttendanceContext(ctx);
-  const lat = getOptionalFloat(ctx.form, "lat");
-  const lng = getOptionalFloat(ctx.form, "lng");
-  const addr = getString(ctx.form, "addr") || null;
-
-  const coordError = requireValidCoords(tenant.gps_required, lat, lng);
+  // Coords are client-reported; normalizeGpsSubmission enforces presence/freshness only.
+  const { coords, error: coordError } = normalizeGpsSubmission(tenant.gps_required, {
+    lat: getOptionalFloat(ctx.form, "lat"),
+    lng: getOptionalFloat(ctx.form, "lng"),
+    addr: getString(ctx.form, "addr") || null,
+    capturedAt: getOptionalFloat(ctx.form, "gps_captured_at"),
+    accuracyM: getOptionalFloat(ctx.form, "gps_accuracy_m"),
+  });
   if (coordError) return actionError(coordError, intent);
 
   const { error } = await punchIn(supabase, {
     tenantId: tenant.id,
     userId: profile.id,
     gpsRequired: tenant.gps_required,
-    lat,
-    lng,
-    addr,
+    lat: coords.lat,
+    lng: coords.lng,
+    addr: coords.addr,
   });
 
   if (error) return actionError(error, intent);
@@ -45,20 +48,22 @@ export const punchInHandler: IntentHandler = async (ctx) => {
 export const punchOutHandler: IntentHandler = async (ctx) => {
   const intent = "punch_out";
   const { profile, tenant, supabase } = await getAttendanceContext(ctx);
-  const lat = getOptionalFloat(ctx.form, "lat");
-  const lng = getOptionalFloat(ctx.form, "lng");
-  const addr = getString(ctx.form, "addr") || null;
-
-  const coordError = requireValidCoords(tenant.gps_required, lat, lng);
+  const { coords, error: coordError } = normalizeGpsSubmission(tenant.gps_required, {
+    lat: getOptionalFloat(ctx.form, "lat"),
+    lng: getOptionalFloat(ctx.form, "lng"),
+    addr: getString(ctx.form, "addr") || null,
+    capturedAt: getOptionalFloat(ctx.form, "gps_captured_at"),
+    accuracyM: getOptionalFloat(ctx.form, "gps_accuracy_m"),
+  });
   if (coordError) return actionError(coordError, intent);
 
   const { error } = await punchOut(supabase, {
     tenantId: tenant.id,
     userId: profile.id,
     gpsRequired: tenant.gps_required,
-    lat,
-    lng,
-    addr,
+    lat: coords.lat,
+    lng: coords.lng,
+    addr: coords.addr,
   });
 
   if (error) return actionError(error, intent);

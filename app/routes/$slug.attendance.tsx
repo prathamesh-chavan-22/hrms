@@ -96,7 +96,10 @@ export default function AttendancePage() {
     <div className="p-5 lg:p-7 space-y-6">
       <div>
         <p className="eyebrow mb-2">ATTENDANCE</p>
-        <h1 className="display text-3xl text-ink">Punch in/out with GPS</h1>
+        <h1 className="display text-3xl text-ink">Attendance</h1>
+        <p className="eyebrow mt-2 text-ink-2">
+          GPS captures a location audit trail when enabled — it is not tamper-proof.
+        </p>
       </div>
 
       <PunchPanel today={today} todayRecord={todayRecord} gpsRequired={tenant.gps_required} />

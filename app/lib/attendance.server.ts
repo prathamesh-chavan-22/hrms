@@ -2,19 +2,58 @@ import type { SupabaseClient } from "~/lib/supabase.server";
 import { todayIST } from "~/lib/dates";
 export { todayIST };
 
-export function requireValidCoords(
+/** Max age of a browser-reported GPS fix before punch submission (ms). */
+export const GPS_MAX_AGE_MS = 3 * 60 * 1000;
+
+/** Reject fixes coarser than this when GPS is required (meters). */
+export const GPS_MAX_ACCURACY_M = 5_000;
+
+export type GpsSubmission = {
+  lat: number | null;
+  lng: number | null;
+  addr: string | null;
+  /** Epoch ms from GeolocationPosition.timestamp — still client-controlled. */
+  capturedAt: number | null;
+  /** Meters from GeolocationPosition.coords.accuracy — still client-controlled. */
+  accuracyM: number | null;
+};
+
+/**
+ * Browser GPS is client-reported audit data, not a tamper-proof anti-fraud control.
+ * Crafted requests can spoof lat/lng, capturedAt, and accuracy. Validation here only
+ * enforces presence, sane ranges, and freshness for honest clients.
+ */
+export function normalizeGpsSubmission(
   gpsRequired: boolean,
-  lat: number | null,
-  lng: number | null,
-): string | null {
-  if (!gpsRequired) return null;
+  raw: GpsSubmission,
+): { coords: GpsSubmission; error: string | null } {
+  if (!gpsRequired) {
+    return {
+      coords: { lat: null, lng: null, addr: null, capturedAt: null, accuracyM: null },
+      error: null,
+    };
+  }
+
+  const { lat, lng, addr, capturedAt, accuracyM } = raw;
+
   if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
-    return "GPS location is required for this tenant";
+    return { coords: raw, error: "GPS location is required for this tenant" };
   }
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return "Invalid GPS coordinates";
+    return { coords: raw, error: "Invalid GPS coordinates" };
   }
-  return null;
+  if (capturedAt == null || Number.isNaN(capturedAt)) {
+    return { coords: raw, error: "GPS lock expired — acquire a fresh location and retry" };
+  }
+  const ageMs = Date.now() - capturedAt;
+  if (ageMs < 0 || ageMs > GPS_MAX_AGE_MS) {
+    return { coords: raw, error: "GPS lock expired — acquire a fresh location and retry" };
+  }
+  if (accuracyM != null && !Number.isNaN(accuracyM) && accuracyM > GPS_MAX_ACCURACY_M) {
+    return { coords: raw, error: "GPS accuracy too low — move to an open area and retry" };
+  }
+
+  return { coords: { lat, lng, addr, capturedAt, accuracyM }, error: null };
 }
 
 export function monthBounds(year: number, month: number): { start: string; end: string } {
@@ -136,8 +175,9 @@ export async function punchIn(
   supabase: SupabaseClient,
   params: PunchParams
 ): Promise<{ error?: string }> {
-  const coordError = requireValidCoords(params.gpsRequired ?? false, params.lat ?? null, params.lng ?? null);
-  if (coordError) return { error: coordError };
+  if (params.gpsRequired && (params.lat == null || params.lng == null)) {
+    return { error: "GPS location is required for this tenant" };
+  }
 
   const today = todayIST();
   const now = new Date().toISOString();
@@ -174,8 +214,9 @@ export async function punchOut(
   supabase: SupabaseClient,
   params: PunchParams
 ): Promise<{ error?: string }> {
-  const coordError = requireValidCoords(params.gpsRequired ?? false, params.lat ?? null, params.lng ?? null);
-  if (coordError) return { error: coordError };
+  if (params.gpsRequired && (params.lat == null || params.lng == null)) {
+    return { error: "GPS location is required for this tenant" };
+  }
 
   const today = todayIST();
   const now = new Date().toISOString();

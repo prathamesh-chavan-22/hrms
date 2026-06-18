@@ -170,6 +170,11 @@ export default function SettingsPage() {
                   {tenant.gps_required ? "ENABLED" : "DISABLED"}
                 </span>
               </p>
+              <p className="text-xs text-ink-2 mt-2 max-w-xl">
+                When enabled, employees must submit browser-reported coordinates at punch time.
+                Coordinates are stored for HR review but can be spoofed — use for audit trails,
+                not as a sole anti-fraud control.
+              </p>
             </div>
             <Form method="post">
               <input type="hidden" name="intent" value="toggle_gps" />

@@ -20,9 +20,13 @@ export function PunchPanel({ todayRecord, gpsRequired }: PunchPanelProps) {
 
   const [gpsStatus, setGpsStatus] = useState<"idle" | "acquiring" | "locked" | "error">("idle");
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ lat: number; lng: number; addr: string | null } | null>(
-    null
-  );
+  const [coords, setCoords] = useState<{
+    lat: number;
+    lng: number;
+    addr: string | null;
+    capturedAt: number;
+    accuracyM: number;
+  } | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
   const isSubmitting = navigation.state === "submitting";
@@ -167,6 +171,8 @@ export function PunchPanel({ todayRecord, gpsRequired }: PunchPanelProps) {
           <input type="hidden" name="lat" value={coords?.lat ?? ""} />
           <input type="hidden" name="lng" value={coords?.lng ?? ""} />
           <input type="hidden" name="addr" value={coords?.addr ?? ""} />
+          <input type="hidden" name="gps_captured_at" value={coords?.capturedAt ?? ""} />
+          <input type="hidden" name="gps_accuracy_m" value={coords?.accuracyM ?? ""} />
           <div className="flex flex-wrap gap-3">
             {canPunchIn && (
               <Button

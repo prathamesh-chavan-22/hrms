@@ -2,6 +2,10 @@ export type GeoResult = {
   lat: number;
   lng: number;
   addr: string | null;
+  /** Epoch ms from GeolocationPosition.timestamp */
+  capturedAt: number;
+  /** Meters from GeolocationPosition.coords.accuracy */
+  accuracyM: number;
 };
 
 export type GeoError =
@@ -29,9 +33,11 @@ export async function getCurrentPosition(): Promise<GeoResult> {
 
   const lat = position.coords.latitude;
   const lng = position.coords.longitude;
+  const capturedAt = position.timestamp;
+  const accuracyM = position.coords.accuracy;
   const addr = await reverseGeocode(lat, lng);
 
-  return { lat, lng, addr };
+  return { lat, lng, addr, capturedAt, accuracyM };
 }
 
 export function geoErrorMessage(code: string): string {
