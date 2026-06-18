@@ -1,24 +1,8 @@
--- ============================================================
--- Glacia HRMS - Storage bucket for tenant logos
--- ============================================================
+-- Enforce hr+ role on tenant logo storage mutations (not just tenant folder match).
 
--- Run via Supabase dashboard: Storage > Create bucket
--- OR via supabase-js with service role. SQL below creates the bucket policy.
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'tenant-logos',
-  'tenant-logos',
-  true,
-  2097152,  -- 2 MB
-  ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
-)
-on conflict (id) do nothing;
-
--- Storage policies
-create policy "logos: public read"
-  on storage.objects for select
-  using (bucket_id = 'tenant-logos');
+drop policy if exists "logos: hr+ upload" on storage.objects;
+drop policy if exists "logos: hr+ update" on storage.objects;
+drop policy if exists "logos: hr+ delete" on storage.objects;
 
 create policy "logos: hr+ upload"
   on storage.objects for insert
