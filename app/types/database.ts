@@ -175,6 +175,27 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["chatbot_intents"]["Row"]>;
       };
+      company_requests: {
+        Row: {
+          id: string;
+          company_name: string;
+          slug: string;
+          owner_name: string;
+          owner_email: string;
+          status: "pending" | "approved" | "rejected";
+          rejection_note: string | null;
+          tenant_id: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["company_requests"]["Row"]> & {
+          company_name: string;
+          slug: string;
+          owner_name: string;
+          owner_email: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["company_requests"]["Row"]>;
+      };
       password_reset_requests: {
         Row: {
           id: string;

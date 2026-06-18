@@ -3,6 +3,7 @@ export type UserRole = "owner" | "hr" | "admin" | "employee";
 export type EmployeeStatus = "active" | "inactive" | "invited";
 export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type HolidayType = "national" | "optional" | "company";
+export type CompanyRequestStatus = "pending" | "approved" | "rejected";
 
 export interface Tenant {
   id: string;
@@ -32,6 +33,19 @@ export interface Profile {
   must_change_password: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CompanyRequest {
+  id: string;
+  company_name: string;
+  slug: string;
+  owner_name: string;
+  owner_email: string;
+  status: CompanyRequestStatus;
+  rejection_note: string | null;
+  tenant_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
 }
 
 export interface Invite {

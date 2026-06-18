@@ -63,7 +63,7 @@ export default function HomePage() {
               <Button variant="secondary" size="sm">Sign In</Button>
             </Link>
             <Link to="/signup">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm">Request Account</Button>
             </Link>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Link to="/signup">
-                <Button size="lg">Start for Free →</Button>
+                <Button size="lg">Request Company Account →</Button>
               </Link>
               <Link to="/pricing">
                 <Button variant="secondary" size="lg">View Pricing</Button>
@@ -167,12 +167,12 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
           <div className="bevel-accent dot-grid hard-shadow p-8 sm:p-12 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div>
-              <p className="eyebrow mb-3" style={{ color: "rgba(255,255,255,0.75)" }}>GET STARTED</p>
+              <p className="eyebrow mb-3" style={{ color: "rgba(255,255,255,0.75)" }}>FOR ORGANIZATIONS</p>
               <h2 className="display text-3xl sm:text-4xl text-[#F4F9FC]">Run HR the right way.</h2>
-              <p className="text-[#F4F9FC]/80 mt-2 text-sm font-mono">FREE FOR UP TO 5 EMPLOYEES · NO CARD</p>
+              <p className="text-[#F4F9FC]/80 mt-2 text-sm font-mono">REQUEST A COMPANY ACCOUNT · EMPLOYEES JOIN BY INVITE</p>
             </div>
             <Link to="/signup">
-              <Button variant="secondary" size="lg">Create Company →</Button>
+              <Button variant="secondary" size="lg">Request Company Account →</Button>
             </Link>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function HomePage() {
         <div className="flex gap-5">
           <Link to="/pricing" className="eyebrow hover:text-ink transition-colors">PRICING</Link>
           <Link to="/login" className="eyebrow hover:text-ink transition-colors">SIGN IN</Link>
-          <Link to="/signup" className="eyebrow hover:text-ink transition-colors">SIGN UP</Link>
+          <Link to="/signup" className="eyebrow hover:text-ink transition-colors">REQUEST ACCOUNT</Link>
         </div>
         <p className="eyebrow">© {new Date().getFullYear()} GLACIA · SUPERNOVAE</p>
       </footer>

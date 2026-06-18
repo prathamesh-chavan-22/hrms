@@ -1,9 +1,16 @@
 import { data, redirect, Form, useLoaderData, useOutletContext, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/$slug.employees";
-import { requireHR, requireChildLoaderAuth, createEmployeeAccount, resetEmployeePassword } from "~/lib/auth.server";
+import {
+  requireHR,
+  requireChildLoaderAuth,
+  createInvite,
+  resendInvite,
+  revokeInvite,
+  resetEmployeePassword,
+} from "~/lib/auth.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import type { TenantOutletContext } from "./$slug";
-import { sendAccountCreatedEmail } from "~/lib/email.server";
+import { sendInviteEmail } from "~/lib/email.server";
 import { canAddEmployee, getPlan } from "~/lib/plans";
 import { IcyCard, IcyCardBody, IcyCardHeader } from "~/components/IcyCard";
 import { Badge, roleBadge, statusBadge } from "~/components/Badge";
@@ -11,6 +18,7 @@ import { Button } from "~/components/Button";
 import { FormField, SelectField } from "~/components/FormField";
 import { FlashMessage } from "~/components/FlashMessage";
 import { isHR, inviteRoleOptions, isInvitableRole, canResetPassword } from "~/lib/roles";
+import type { UserRole } from "~/types/app";
 import { useState } from "react";
 
 export function meta() {
@@ -26,7 +34,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     throw redirect(`/${slug}/dashboard`);
   }
 
-  const [employeesRes, countRes] = await Promise.all([
+  const now = new Date().toISOString();
+
+  const [employeesRes, countRes, invitesRes, pendingInviteCountRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, email, role, status, department, designation, employee_code, date_of_joining, created_at, must_change_password")
@@ -36,11 +46,26 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId),
+    supabase
+      .from("invites")
+      .select("id, email, role, expires_at, created_at")
+      .eq("tenant_id", tenantId)
+      .is("accepted_at", null)
+      .gt("expires_at", now)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("invites")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .is("accepted_at", null)
+      .gt("expires_at", now),
   ]);
 
   return data({
     employees: employeesRes.data ?? [],
     totalCount: countRes.count ?? 0,
+    pendingInvites: invitesRes.data ?? [],
+    pendingInviteCount: pendingInviteCountRes.count ?? 0,
   });
 }
 
@@ -52,42 +77,22 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const intent = String(form.get("intent"));
 
-  if (intent === "create") {
+  if (intent === "invite") {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
-    const fullName = String(form.get("fullName") ?? "").trim();
     const rawRole = String(form.get("role") ?? "employee");
-    const password = String(form.get("password") ?? "");
 
     if (!isInvitableRole(rawRole, profile.role)) {
       return data({ error: "Invalid role", intent, success: null }, { status: 403 });
     }
 
-    const role = rawRole;
-
     if (!email) return data({ error: "Email is required", intent, success: null }, { status: 400 });
-    if (!fullName) return data({ error: "Full name is required", intent, success: null }, { status: 400 });
-    if (password.length < 8) return data({ error: "Password must be at least 8 characters", intent, success: null }, { status: 400 });
 
-    const { count } = await supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id);
-
-    if (!canAddEmployee(tenant.plan, count ?? 0)) {
-      const plan = getPlan(tenant.plan);
-      return data({
-        error: `You have reached your plan limit of ${plan.maxEmployees} employees. Upgrade to add more.`,
-        intent,
-        success: null,
-      }, { status: 400 });
-    }
-
-    const result = await createEmployeeAccount(env, {
+    const result = await createInvite(env, {
       tenantId: tenant.id,
       email,
-      fullName,
-      role,
-      password,
+      role: rawRole as UserRole,
+      invitedById: profile.id,
+      inviterRole: profile.role,
       tenantPlan: tenant.plan,
     });
 
@@ -95,14 +100,44 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       return data({ error: result.error, intent, success: null }, { status: 400 });
     }
 
-    await sendAccountCreatedEmail(env, {
+    await sendInviteEmail(env, {
       to: email,
-      fullName,
+      invitedByName: profile.full_name,
       companyName: tenant.name,
-      temporaryPassword: password,
+      role: rawRole,
+      inviteToken: result.invite!.token,
     }).catch(console.error);
 
-    return data({ success: `Account created for ${fullName}. They must change their password on first login.`, intent, error: null });
+    return data({ success: `Invitation sent to ${email}`, intent, error: null });
+  }
+
+  if (intent === "resend_invite") {
+    const inviteId = String(form.get("inviteId"));
+    const result = await resendInvite(env, { inviteId, tenantId: tenant.id });
+    if (result.error) {
+      return data({ error: result.error, intent, success: null }, { status: 400 });
+    }
+
+    const invite = result.invite!;
+
+    await sendInviteEmail(env, {
+      to: invite.email,
+      invitedByName: profile.full_name,
+      companyName: tenant.name,
+      role: invite.role,
+      inviteToken: invite.token,
+    }).catch(console.error);
+
+    return data({ success: `Invitation resent to ${invite.email}`, intent, error: null });
+  }
+
+  if (intent === "revoke_invite") {
+    const inviteId = String(form.get("inviteId"));
+    const result = await revokeInvite(env, { inviteId, tenantId: tenant.id });
+    if (result.error) {
+      return data({ error: result.error, intent, success: null }, { status: 400 });
+    }
+    return data({ success: "Invitation revoked", intent, error: null });
   }
 
   if (intent === "reset_password") {
@@ -153,15 +188,16 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
 export default function EmployeesPage() {
   const { profile, tenant } = useOutletContext<TenantOutletContext>();
-  const { employees, totalCount } = useLoaderData<typeof loader>();
+  const { employees, totalCount, pendingInvites, pendingInviteCount } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [resetUserId, setResetUserId] = useState<string | null>(null);
 
   const plan = getPlan(tenant.plan);
-  const atCap = totalCount >= plan.maxEmployees;
+  const seatCount = totalCount + pendingInviteCount;
+  const atCap = !canAddEmployee(tenant.plan, seatCount);
   const roleOptions = inviteRoleOptions(profile.role);
   const canChooseRole = roleOptions.length > 1;
   const canReset = canResetPassword(profile.role);
@@ -172,14 +208,16 @@ export default function EmployeesPage() {
         <div>
           <p className="eyebrow mb-2">EMPLOYEES</p>
           <h1 className="display text-3xl text-ink">Team Directory</h1>
-          <p className="eyebrow mt-2 tnum">{totalCount} OF {plan.maxEmployees} ON {plan.name.toUpperCase()} PLAN</p>
+          <p className="eyebrow mt-2 tnum">
+            {totalCount} ACTIVE · {pendingInviteCount} PENDING INVITES · {plan.maxEmployees} MAX ON {plan.name.toUpperCase()}
+          </p>
         </div>
         <Button
-          onClick={() => setShowCreateForm((v) => !v)}
+          onClick={() => setShowInviteForm((v) => !v)}
           disabled={atCap}
           title={atCap ? `Plan limit reached (${plan.maxEmployees})` : undefined}
         >
-          + Add Employee
+          + Invite Employee
         </Button>
       </div>
 
@@ -187,38 +225,24 @@ export default function EmployeesPage() {
       <FlashMessage message={actionData?.error} variant="error" />
       {atCap && (
         <div className="bevel-sunken p-4 text-sm font-mono" style={{ color: "var(--warn)" }}>
-          You have reached your {plan.name} plan limit of {plan.maxEmployees} employees. Upgrade coming soon via Razorpay.
+          You have reached your {plan.name} plan limit of {plan.maxEmployees} seats (including pending invites). Upgrade coming soon via Razorpay.
         </div>
       )}
 
-      {showCreateForm && (
+      {showInviteForm && (
         <IcyCard>
           <IcyCardHeader>
-            <h2 className="eyebrow">CREATE EMPLOYEE ACCOUNT</h2>
+            <h2 className="eyebrow">SEND INVITATION</h2>
           </IcyCardHeader>
           <IcyCardBody>
             <Form method="post" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input type="hidden" name="intent" value="create" />
-              <FormField
-                label="Full Name"
-                name="fullName"
-                placeholder="Jane Doe"
-                required
-              />
+              <input type="hidden" name="intent" value="invite" />
               <FormField
                 label="Email Address"
                 name="email"
                 type="email"
                 placeholder="employee@company.com"
                 required
-              />
-              <FormField
-                label="Temporary Password"
-                name="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                required
-                autoComplete="new-password"
               />
               {canChooseRole ? (
                 <SelectField
@@ -232,10 +256,10 @@ export default function EmployeesPage() {
               )}
               <div className="sm:col-span-2 flex gap-3">
                 <Button type="submit" loading={isSubmitting}>
-                  Create Account
+                  Send Invitation
                 </Button>
                 <p className="text-xs text-ink-2 self-center">
-                  Employee will be prompted to change password on first login.
+                  They will receive an email to set their password and join your workspace.
                 </p>
               </div>
             </Form>
@@ -274,6 +298,61 @@ export default function EmployeesPage() {
         </IcyCard>
       )}
 
+      {pendingInvites.length > 0 && (
+        <IcyCard>
+          <IcyCardHeader>
+            <h2 className="eyebrow">PENDING INVITATIONS</h2>
+          </IcyCardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="panel-header">
+                  <th className="text-left px-5 py-2.5 eyebrow">Email</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Role</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Sent</th>
+                  <th className="text-left px-5 py-2.5 eyebrow">Expires</th>
+                  <th className="px-5 py-2.5"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingInvites.map((invite) => (
+                  <tr key={invite.id} className="rule-dashed hover:bg-surface-2 transition-colors">
+                    <td className="px-5 py-3 text-ink">{invite.email}</td>
+                    <td className="px-5 py-3">
+                      <Badge {...roleBadge(invite.role)} size="sm">{invite.role}</Badge>
+                    </td>
+                    <td className="px-5 py-3 text-muted text-xs font-mono">
+                      {new Date(invite.created_at).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="px-5 py-3 text-muted text-xs font-mono">
+                      {new Date(invite.expires_at).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-3 justify-end">
+                        <Form method="post" className="inline">
+                          <input type="hidden" name="intent" value="resend_invite" />
+                          <input type="hidden" name="inviteId" value={invite.id} />
+                          <button type="submit" className="eyebrow hover:underline text-accent-dark">
+                            RESEND
+                          </button>
+                        </Form>
+                        <Form method="post" className="inline">
+                          <input type="hidden" name="intent" value="revoke_invite" />
+                          <input type="hidden" name="inviteId" value={invite.id} />
+                          <button type="submit" className="eyebrow hover:underline" style={{ color: "var(--err)" }}>
+                            REVOKE
+                          </button>
+                        </Form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </IcyCard>
+      )}
+
       <IcyCard>
         <IcyCardHeader>
           <h2 className="eyebrow">ALL EMPLOYEES</h2>
@@ -281,7 +360,7 @@ export default function EmployeesPage() {
         <div className="overflow-x-auto">
           {employees.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-ink-2">No employees yet. Add your first team member.</p>
+              <p className="text-ink-2">No employees yet. Invite your first team member.</p>
             </div>
           ) : (
             <table className="w-full text-sm">

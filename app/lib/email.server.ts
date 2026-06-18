@@ -109,54 +109,135 @@ export async function sendWelcomeEmail(
   return { success: !error };
 }
 
-export async function sendAccountCreatedEmail(
+export async function sendCompanyRequestConfirmationEmail(
   env: Env,
-  params: {
-    to: string;
-    fullName: string;
-    companyName: string;
-    temporaryPassword: string;
-  }
+  params: { to: string; ownerName: string; companyName: string }
 ) {
   const resend = getResendClient(env);
-  const loginUrl = `${env.APP_BASE_URL}/login`;
-  const safeName = escapeHtml(params.fullName);
+  const safeName = escapeHtml(params.ownerName);
   const safeCompany = escapeHtml(params.companyName);
 
   const { error } = await resend.emails.send({
     from: "Glacia HRMS <noreply@glacia.supernovae.me>",
     to: params.to,
-    subject: `Your ${safeCompany} account on Glacia`,
+    subject: "We received your company account request",
     html: `
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f9ff; margin: 0; padding: 40px 20px; }
-    .card { background: #fff; border-radius: 16px; max-width: 520px; margin: 0 auto; padding: 40px; box-shadow: 0 4px 24px rgba(14,165,233,0.08); }
-    .logo { font-size: 28px; font-weight: 800; color: #0ea5e9; letter-spacing: -0.5px; margin-bottom: 32px; }
-    h1 { font-size: 22px; color: #0f172a; margin: 0 0 16px; }
-    p { color: #475569; line-height: 1.6; margin: 0 0 24px; }
-    .btn { display: inline-block; background: linear-gradient(135deg,#38bdf8,#0ea5e9); color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; }
-    .cred { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; margin: 16px 0; }
-    .footer { margin-top: 40px; font-size: 13px; color: #94a3b8; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="logo">❄ Glacia</div>
-    <h1>Hi ${safeName}, your account is ready</h1>
-    <p>HR has created your account for <strong>${safeCompany}</strong>. Sign in with the temporary password below. You will be asked to set a new password on your first login.</p>
-    <div class="cred">Temporary password: <strong>${escapeHtml(params.temporaryPassword)}</strong></div>
-    <a href="${loginUrl}" class="btn">Sign In</a>
-    <div class="footer">© ${new Date().getFullYear()} Glacia HRMS &mdash; Powered by Supernovae</div>
-  </div>
+<head><meta charset="utf-8" /></head>
+<body style="font-family: sans-serif; color: #334155; line-height: 1.6;">
+  <h2>Request received</h2>
+  <p>Hi ${safeName},</p>
+  <p>We've received your request to create <strong>${safeCompany}</strong> on Glacia HRMS. Our team will review it and email you when your account is approved.</p>
+  <p style="color:#64748b;font-size:13px;">You don't need to take any further action right now.</p>
 </body>
 </html>`,
   });
 
-  if (error) console.error("[Resend] Account created email failed:", error);
+  if (error) console.error("[Resend] Company request confirmation failed:", error);
+  return { success: !error };
+}
+
+export async function sendCompanyRequestSuperAdminEmail(
+  env: Env,
+  params: {
+    companyName: string;
+    slug: string;
+    ownerName: string;
+    ownerEmail: string;
+  }
+) {
+  if (!env.SUPER_ADMIN_EMAIL) return { success: false };
+
+  const resend = getResendClient(env);
+  const adminUrl = `${env.APP_BASE_URL}/admin/company-requests`;
+  const safeCompany = escapeHtml(params.companyName);
+  const safeSlug = escapeHtml(params.slug);
+  const safeName = escapeHtml(params.ownerName);
+  const safeEmail = escapeHtml(params.ownerEmail);
+
+  const { error } = await resend.emails.send({
+    from: "Glacia HRMS <noreply@glacia.supernovae.me>",
+    to: env.SUPER_ADMIN_EMAIL,
+    subject: `[Action required] New company request — ${safeCompany}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family: sans-serif; color: #334155; line-height: 1.6;">
+  <h2>New company account request</h2>
+  <p><strong>Company:</strong> ${safeCompany}</p>
+  <p><strong>Slug:</strong> ${safeSlug}</p>
+  <p><strong>Owner:</strong> ${safeName} (${safeEmail})</p>
+  <p><a href="${adminUrl}">Review pending requests</a></p>
+</body>
+</html>`,
+  });
+
+  if (error) console.error("[Resend] Superadmin company request alert failed:", error);
+  return { success: !error };
+}
+
+export async function sendCompanyApprovedEmail(
+  env: Env,
+  params: { to: string; ownerName: string; companyName: string; slug: string }
+) {
+  const resend = getResendClient(env);
+  const loginUrl = `${env.APP_BASE_URL}/login`;
+  const safeName = escapeHtml(params.ownerName);
+  const safeCompany = escapeHtml(params.companyName);
+
+  const { error } = await resend.emails.send({
+    from: "Glacia HRMS <noreply@glacia.supernovae.me>",
+    to: params.to,
+    subject: `Your ${safeCompany} account has been approved`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family: sans-serif; color: #334155; line-height: 1.6;">
+  <h2>You're approved!</h2>
+  <p>Hi ${safeName},</p>
+  <p>Your company account for <strong>${safeCompany}</strong> has been approved. Sign in with the email address you provided. You'll be asked to set a new password on first login.</p>
+  <p><a href="${loginUrl}">Sign in to Glacia</a></p>
+</body>
+</html>`,
+  });
+
+  if (error) console.error("[Resend] Company approved email failed:", error);
+  return { success: !error };
+}
+
+export async function sendCompanyRejectedEmail(
+  env: Env,
+  params: { to: string; ownerName: string; companyName: string; note?: string | null }
+) {
+  const resend = getResendClient(env);
+  const safeName = escapeHtml(params.ownerName);
+  const safeCompany = escapeHtml(params.companyName);
+  const noteBlock = params.note
+    ? `<p><strong>Note:</strong> ${escapeHtml(params.note)}</p>`
+    : "";
+
+  const { error } = await resend.emails.send({
+    from: "Glacia HRMS <noreply@glacia.supernovae.me>",
+    to: params.to,
+    subject: `Update on your ${safeCompany} request`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="font-family: sans-serif; color: #334155; line-height: 1.6;">
+  <h2>Request not approved</h2>
+  <p>Hi ${safeName},</p>
+  <p>We're unable to approve your request for <strong>${safeCompany}</strong> at this time.</p>
+  ${noteBlock}
+  <p>If you have questions, reply to this email or contact support.</p>
+</body>
+</html>`,
+  });
+
+  if (error) console.error("[Resend] Company rejected email failed:", error);
   return { success: !error };
 }
 

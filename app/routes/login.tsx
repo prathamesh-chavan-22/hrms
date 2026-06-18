@@ -1,7 +1,7 @@
 import { data, redirect, Form, useActionData, useNavigation, Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/login";
 import { createSupabaseServerClient, appendCookieHeaders } from "~/lib/supabase.server";
-import { resolveRedirectAfterLogin, getLoginRedirect } from "~/lib/auth.server";
+import { resolveRedirectAfterLogin, getLoginRedirect, getSuperAdminRedirect } from "~/lib/auth.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -46,10 +46,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     .single();
 
   const tenant = (profile as unknown as { tenant: { slug: string } | null })?.tenant;
+  const superAdminRedirect = getSuperAdminRedirect(user.email, env);
+  if (superAdminRedirect) {
+    const headers = appendCookieHeaders(new Headers(), cookies);
+    headers.set("Location", superAdminRedirect);
+    return new Response(null, { status: 302, headers });
+  }
+
   const redirectTo = getLoginRedirect({
     must_change_password: profile?.must_change_password,
     tenant,
-  });
+  }, env, user.email);
   const headers = appendCookieHeaders(new Headers(), cookies);
 
   if (redirectTo) {
@@ -133,7 +140,7 @@ export default function LoginPage() {
             <p className="mt-6 text-sm text-ink-2">
               New to Glacia?{" "}
               <Link to="/signup" className="font-mono font-bold text-accent-dark hover:underline uppercase text-xs tracking-wide">
-                Create company →
+                Request a company account →
               </Link>
             </p>
           </IcyCardBody>

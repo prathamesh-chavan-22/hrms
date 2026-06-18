@@ -1,7 +1,10 @@
 import { data, redirect, Form, useActionData, useNavigation, Link } from "react-router";
 import type { Route } from "./+types/signup";
-import { createTenantWithOwner } from "~/lib/auth.server";
-import { sendWelcomeEmail } from "~/lib/email.server";
+import { submitCompanyRequest } from "~/lib/auth.server";
+import {
+  sendCompanyRequestConfirmationEmail,
+  sendCompanyRequestSuperAdminEmail,
+} from "~/lib/email.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
@@ -9,7 +12,7 @@ import { Button } from "~/components/Button";
 import { IcyCard, IcyCardBody } from "~/components/IcyCard";
 
 export function meta() {
-  return [{ title: "Sign Up — Glacia HRMS" }];
+  return [{ title: "Request Company Account — Glacia HRMS" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -27,46 +30,35 @@ export async function action({ request, context }: Route.ActionArgs) {
   const slug = String(form.get("slug") ?? "").trim().toLowerCase();
   const ownerName = String(form.get("ownerName") ?? "").trim();
   const ownerEmail = String(form.get("ownerEmail") ?? "").trim().toLowerCase();
-  const password = String(form.get("password") ?? "");
-  const confirmPassword = String(form.get("confirmPassword") ?? "");
 
-  const errors: Record<string, string> = {};
-
-  if (!companyName) errors.companyName = "Company name is required";
-  if (!slug) errors.slug = "Slug is required";
-  else if (!/^[a-z0-9][a-z0-9\-]{1,30}[a-z0-9]$/.test(slug))
-    errors.slug = "Slug must be 3-32 chars, lowercase letters, numbers and hyphens only";
-  if (!ownerName) errors.ownerName = "Your name is required";
-  if (!ownerEmail) errors.ownerEmail = "Email is required";
-  if (password.length < 8) errors.password = "Password must be at least 8 characters";
-  if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match";
-
-  if (Object.keys(errors).length > 0) {
-    return data({ errors, values: { companyName, slug, ownerName, ownerEmail } }, { status: 400 });
-  }
-
-  const result = await createTenantWithOwner(env, {
+  const result = await submitCompanyRequest(env, {
     companyName,
     slug,
-    ownerEmail,
     ownerName,
-    password,
+    ownerEmail,
   });
 
-  if (result.error) {
-    return data({ errors: { form: result.error }, values: { companyName, slug, ownerName, ownerEmail } }, { status: 400 });
+  if (result.errors) {
+    return data(
+      { errors: result.errors, values: { companyName, slug, ownerName, ownerEmail }, submitted: false },
+      { status: 400 }
+    );
   }
 
-  // Send welcome email (non-blocking)
-  sendWelcomeEmail(env, {
+  sendCompanyRequestConfirmationEmail(env, {
     to: ownerEmail,
-    name: ownerName,
+    ownerName,
     companyName,
-    slug,
   }).catch(console.error);
 
-  // Redirect to login so they can authenticate
-  return redirect(`/login?welcome=1&slug=${slug}`);
+  sendCompanyRequestSuperAdminEmail(env, {
+    companyName,
+    slug,
+    ownerName,
+    ownerEmail,
+  }).catch(console.error);
+
+  return data({ submitted: true, errors: null, values: null });
 }
 
 export default function SignupPage() {
@@ -76,6 +68,37 @@ export default function SignupPage() {
 
   const errors = actionData?.errors ?? {};
   const values = actionData?.values ?? {};
+  const submitted = actionData?.submitted === true;
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4 py-10">
+        <div className="relative w-full max-w-lg">
+          <div className="mb-8">
+            <Link to="/" className="inline-block">
+              <GlaciaLogo size="lg" />
+            </Link>
+            <p className="eyebrow mt-4">REQUEST SUBMITTED</p>
+          </div>
+
+          <IcyCard className="hard-shadow">
+            <IcyCardBody className="p-8">
+              <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink mb-3">
+                We&apos;ll be in touch
+              </h2>
+              <p className="text-ink-2 leading-relaxed">
+                Your company account request has been submitted. We&apos;ll email you when it&apos;s approved.
+                You can sign in once you receive the approval email.
+              </p>
+              <Link to="/login" className="inline-block mt-6">
+                <Button variant="secondary">Back to Sign In</Button>
+              </Link>
+            </IcyCardBody>
+          </IcyCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center p-4 py-10">
@@ -84,7 +107,7 @@ export default function SignupPage() {
           <Link to="/" className="inline-block">
             <GlaciaLogo size="lg" />
           </Link>
-          <p className="eyebrow mt-4">CREATE YOUR COMPANY ACCOUNT</p>
+          <p className="eyebrow mt-4">REQUEST A COMPANY ACCOUNT</p>
         </div>
 
         <IcyCard className="hard-shadow">
@@ -98,7 +121,7 @@ export default function SignupPage() {
             <Form method="post" className="space-y-5">
               <div>
                 <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink">Company Details</h2>
-                <p className="eyebrow mt-1">CREATES YOUR DEDICATED HRMS WORKSPACE</p>
+                <p className="eyebrow mt-1">SUBMITTED FOR SUPERADMIN REVIEW</p>
               </div>
 
               <FormField
@@ -121,8 +144,8 @@ export default function SignupPage() {
               />
 
               <div className="rule-solid pt-5">
-                <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink">Your Account</h2>
-                <p className="eyebrow mt-1">YOU WILL BE THE OWNER</p>
+                <h2 className="font-mono font-bold text-sm uppercase tracking-[0.06em] text-ink">Account Owner</h2>
+                <p className="eyebrow mt-1">YOU WILL BE THE COMPANY ADMIN</p>
               </div>
 
               <FormField
@@ -145,28 +168,8 @@ export default function SignupPage() {
                 autoComplete="email"
               />
 
-              <FormField
-                label="Password"
-                name="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                required
-                error={errors.password}
-                autoComplete="new-password"
-              />
-
-              <FormField
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                placeholder="Repeat password"
-                required
-                error={errors.confirmPassword}
-                autoComplete="new-password"
-              />
-
               <Button type="submit" fullWidth loading={isSubmitting} size="lg" className="mt-2">
-                Create Company Account
+                Request Company Account
               </Button>
             </Form>
 
@@ -179,7 +182,7 @@ export default function SignupPage() {
           </IcyCardBody>
         </IcyCard>
 
-        <p className="eyebrow mt-6">BY SIGNING UP YOU AGREE TO OUR TERMS & PRIVACY POLICY</p>
+        <p className="eyebrow mt-6">EMPLOYEES JOIN VIA INVITE ONLY — NO PUBLIC SIGNUP</p>
       </div>
     </div>
   );

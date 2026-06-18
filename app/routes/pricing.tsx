@@ -34,7 +34,7 @@ export default function PricingPage() {
               <Button variant="secondary" size="sm">Sign In</Button>
             </Link>
             <Link to="/signup">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm">Request Account</Button>
             </Link>
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function PricingPage() {
 
               <Link to="/signup" className="block">
                 <Button variant={plan.highlight ? "secondary" : "primary"} fullWidth size="md">
-                  {plan.price === 0 ? "Get Started" : billingEnabled ? `Start ${plan.name}` : "Join Beta"}
+                  {plan.price === 0 ? "Request Account" : billingEnabled ? `Start ${plan.name}` : "Join Beta"}
                 </Button>
               </Link>
               {!billingEnabled && plan.price > 0 && (
