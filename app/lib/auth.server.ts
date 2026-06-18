@@ -2,6 +2,7 @@
 export { SLUG_REGEX, isValidSlug } from "./auth/constants";
 export {
   isSuperAdminEmail,
+  isActiveProfile,
   getSuperAdminRedirect,
   generateTempPassword,
   getLoginRedirect,

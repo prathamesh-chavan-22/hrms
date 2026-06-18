@@ -1,7 +1,12 @@
 import { data, redirect, Form, useActionData, useNavigation, Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/login";
 import { createSupabaseServerClient, appendCookieHeaders } from "~/lib/supabase.server";
-import { resolveRedirectAfterLogin, getLoginRedirect, getSuperAdminRedirect } from "~/lib/auth.server";
+import {
+  resolveRedirectAfterLogin,
+  getLoginRedirect,
+  getSuperAdminRedirect,
+  isActiveProfile,
+} from "~/lib/auth.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -13,7 +18,14 @@ export function meta() {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const result = await resolveRedirectAfterLogin(request, context.cloudflare.env);
-  if (result.redirectTo) return redirect(result.redirectTo);
+  if (result.redirectTo) {
+    const headers =
+      result.cookies.length > 0 ? appendCookieHeaders(new Headers(), result.cookies) : undefined;
+    throw redirect(result.redirectTo, headers ? { headers } : undefined);
+  }
+  if (result.signedOut && result.cookies.length > 0) {
+    return data(null, { headers: appendCookieHeaders(new Headers(), result.cookies) });
+  }
   return null;
 }
 
@@ -41,7 +53,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("must_change_password, tenant:tenants(slug)")
+    .select("must_change_password, status, tenant:tenants(slug)")
     .eq("id", user.id)
     .single();
 
@@ -51,6 +63,15 @@ export async function action({ request, context }: Route.ActionArgs) {
     const headers = appendCookieHeaders(new Headers(), cookies);
     headers.set("Location", superAdminRedirect);
     return new Response(null, { status: 302, headers });
+  }
+
+  if (profile && !isActiveProfile(profile.status)) {
+    await supabase.auth.signOut();
+    const headers = appendCookieHeaders(new Headers(), cookies);
+    return data(
+      { error: "Your account has been deactivated. Contact your HR admin." },
+      { status: 403, headers }
+    );
   }
 
   const redirectTo = getLoginRedirect({
@@ -104,6 +125,11 @@ export default function LoginPage() {
             {searchParams.get("error") === "no_tenant" && (
               <div className="bevel-sunken mb-5 p-4 text-sm font-mono" style={{ color: "var(--warn)" }}>
                 Your account is not linked to a company. Contact your HR admin.
+              </div>
+            )}
+            {searchParams.get("error") === "inactive" && (
+              <div className="bevel-sunken mb-5 p-4 text-sm font-mono text-err">
+                Your account has been deactivated. Contact your HR admin.
               </div>
             )}
 

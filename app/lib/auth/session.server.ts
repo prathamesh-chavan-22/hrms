@@ -1,8 +1,25 @@
 import { redirect } from "react-router";
-import { createSupabaseServerClient } from "../supabase.server";
+import { appendCookieHeaders, createSupabaseServerClient } from "../supabase.server";
 import type { Profile, Tenant } from "~/types/app";
 import type { ProfileWithTenant } from "~/types/domain";
-import { getSuperAdminRedirect, getLoginRedirect } from "./helpers";
+import { getSuperAdminRedirect, getLoginRedirect, isActiveProfile, isSuperAdminEmail } from "./helpers";
+
+const INACTIVE_LOGIN_URL = "/login?error=inactive";
+
+export async function ensureActiveProfileAccess(
+  supabase: ReturnType<typeof createSupabaseServerClient>["supabase"],
+  cookies: { name: string; value: string }[],
+  status: string | undefined,
+  email?: string,
+  env?: Env
+): Promise<void> {
+  if (env && email && isSuperAdminEmail(email, env)) return;
+  if (!isActiveProfile(status)) {
+    await supabase.auth.signOut();
+    const headers = appendCookieHeaders(new Headers(), cookies);
+    throw redirect(INACTIVE_LOGIN_URL, { headers });
+  }
+}
 
 export async function getSession(request: Request, env: Env) {
   const { supabase, cookies } = createSupabaseServerClient(request, env);
@@ -34,6 +51,7 @@ export async function requireProfile(request: Request, env: Env): Promise<{
   if (!profile) throw redirect("/login");
 
   const row = profile as ProfileWithTenant;
+  await ensureActiveProfileAccess(supabase, cookies, row.status, user.email, env);
 
   return {
     profile: row as Profile,
@@ -48,7 +66,7 @@ export async function resolveRedirectAfterLogin(request: Request, env: Env) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("must_change_password, tenant:tenants(slug)")
+    .select("must_change_password, status, tenant:tenants(slug)")
     .eq("id", user.id)
     .single();
 
@@ -60,6 +78,11 @@ export async function resolveRedirectAfterLogin(request: Request, env: Env) {
 
   const superAdminRedirect = getSuperAdminRedirect(user.email, env);
   if (superAdminRedirect) return { user, cookies, redirectTo: superAdminRedirect };
+
+  if (!isActiveProfile(profile.status)) {
+    await supabase.auth.signOut();
+    return { user: null, cookies, redirectTo: null, signedOut: true as const };
+  }
 
   const tenant = (profile as unknown as { tenant: { slug: string } | null }).tenant;
   const redirectTo = getLoginRedirect(

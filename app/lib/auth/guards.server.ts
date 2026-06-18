@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "../supabase.server";
 import type { Profile, Tenant } from "~/types/app";
 import { isHR } from "~/lib/roles";
 import { isSuperAdminEmail } from "./helpers";
-import { requireUser, requireProfile } from "./session.server";
+import { ensureActiveProfileAccess, requireUser, requireProfile } from "./session.server";
 
 export async function requireSuperAdmin(request: Request, env: Env) {
   const { user, cookies } = await requireUser(request, env);
@@ -50,11 +50,19 @@ export async function requireChildLoaderAuth(request: Request, env: Env) {
 
   const { data: row } = await supabase
     .from("profiles")
-    .select("id, role, tenant_id")
+    .select("id, role, tenant_id, status")
     .eq("id", user.id)
     .single();
 
   if (!row) throw redirect("/login");
+
+  await ensureActiveProfileAccess(
+    supabase,
+    cookies,
+    row.status as string,
+    user.email,
+    env
+  );
 
   return {
     userId: user.id as string,

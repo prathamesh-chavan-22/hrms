@@ -1,3 +1,9 @@
+import type { EmployeeStatus } from "~/types/app";
+
+export function isActiveProfile(status: EmployeeStatus | string | undefined): boolean {
+  return status === "active";
+}
+
 export function isSuperAdminEmail(email: string | undefined, env: Env): boolean {
   if (!email || !env.SUPER_ADMIN_EMAIL) return false;
   return email.toLowerCase() === env.SUPER_ADMIN_EMAIL.toLowerCase();
