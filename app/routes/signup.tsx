@@ -51,14 +51,14 @@ export async function action({ request, context }: Route.ActionArgs) {
     sendCompanyRequestConfirmationEmail(env, { to: ownerEmail, ownerName, companyName }),
     "company_request_confirmation",
     { email: ownerEmail },
-    context.cloudflare.ctx.waitUntil
+    (p) => context.cloudflare.ctx.waitUntil(p)
   );
 
   fireAndForgetEmail(
     sendCompanyRequestSuperAdminEmail(env, { companyName, slug, ownerName, ownerEmail }),
     "company_request_superadmin",
     { company: companyName },
-    context.cloudflare.ctx.waitUntil
+    (p) => context.cloudflare.ctx.waitUntil(p)
   );
 
   return data({ submitted: true, errors: null, values: null });
