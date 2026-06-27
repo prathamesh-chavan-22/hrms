@@ -14,7 +14,7 @@ async function sendEmail(
 ) {
   const resend = getResendClient(env);
   const { error } = await resend.emails.send({
-    from: "Glacia HRMS <noreply@glacia.supernovae.me>",
+    from: "Glacia HRMS <noreply@supernovae.me>",
     to: params.to,
     subject: params.subject,
     html: params.html,
