@@ -42,7 +42,7 @@ export function TenantSidebar({ tenant, profile, slug }: TenantSidebarProps) {
     { to: `/${slug}/dashboard`, label: "Dashboard", icon: <NavIcon path={ICONS.dashboard} /> },
     { to: `/${slug}/attendance`, label: "Attendance", icon: <NavIcon path={ICONS.attendance} /> },
     { to: `/${slug}/leave`, label: "Leave", icon: <NavIcon path={ICONS.leave} />, phase2: true },
-    { to: `/${slug}/holidays`, label: "Holidays", icon: <NavIcon path={ICONS.holidays} />, phase2: true },
+    { to: `/${slug}/holidays`, label: "Holidays", icon: <NavIcon path={ICONS.holidays} /> },
     { to: `/${slug}/chat`, label: "Assistant", icon: <NavIcon path={ICONS.chat} />, phase2: true },
     ...(hrUser ? [
       { to: `/${slug}/employees`, label: "Employees", icon: <NavIcon path={ICONS.employees} />, hrOnly: true },
