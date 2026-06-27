@@ -48,6 +48,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     form,
     env: context.cloudflare.env,
     params: {},
+    waitUntil: context.cloudflare.ctx.waitUntil,
   });
 }
 

@@ -6,6 +6,7 @@ export type IntentHandlerContext = {
   form: FormData;
   env: Env;
   params: Record<string, string | undefined>;
+  waitUntil?: (promise: Promise<any>) => void;
 };
 
 export type IntentHandler = (

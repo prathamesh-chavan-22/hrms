@@ -4,7 +4,19 @@ import { logEmailFailure } from "~/lib/logging.server";
 export function fireAndForgetEmail(
   promise: Promise<{ error?: string; success?: boolean }>,
   emailType: string,
-  meta?: Record<string, string>
+  meta?: Record<string, string>,
+  waitUntil?: (promise: Promise<any>) => void
 ) {
-  promise.catch((err) => logEmailFailure(emailType, err, meta));
+  const wrappedPromise = promise.catch((err) => {
+    logEmailFailure(emailType, err, meta);
+    return { error: String(err) };
+  });
+
+  if (waitUntil) {
+    try {
+      waitUntil(wrappedPromise);
+    } catch (e) {
+      console.warn("fireAndForgetEmail: failed to call waitUntil:", e);
+    }
+  }
 }

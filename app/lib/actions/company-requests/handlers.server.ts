@@ -30,7 +30,8 @@ export const approveRequestHandler: IntentHandler = async (ctx) => {
         slug: companyRequest.slug,
       }),
       "welcome",
-      { company: companyRequest.company_name }
+      { company: companyRequest.company_name },
+      ctx.waitUntil
     );
 
     fireAndForgetEmail(
@@ -41,7 +42,8 @@ export const approveRequestHandler: IntentHandler = async (ctx) => {
         slug: companyRequest.slug,
       }),
       "company_approved",
-      { company: companyRequest.company_name }
+      { company: companyRequest.company_name },
+      ctx.waitUntil
     );
   }
 
@@ -68,7 +70,8 @@ export const rejectRequestHandler: IntentHandler = async (ctx) => {
         note: rejectionNote || null,
       }),
       "company_rejected",
-      { company: result.request.company_name }
+      { company: result.request.company_name },
+      ctx.waitUntil
     );
   }
 

@@ -54,7 +54,8 @@ export const inviteHandler: IntentHandler = async (ctx) => {
       inviteToken: result.invite!.token,
     }),
     "invite",
-    { email }
+    { email },
+    ctx.waitUntil
   );
 
   return actionSuccess(`Invitation sent to ${email}`, intent);
@@ -78,7 +79,8 @@ export const resendInviteHandler: IntentHandler = async (ctx) => {
       inviteToken: invite.token,
     }),
     "invite_resend",
-    { email: invite.email }
+    { email: invite.email },
+    ctx.waitUntil
   );
 
   return actionSuccess(`Invitation resent to ${invite.email}`, intent);
