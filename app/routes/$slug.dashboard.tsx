@@ -1,4 +1,4 @@
-import { useLoaderData, useOutletContext, data, Link } from "react-router";
+import { useLoaderData, useOutletContext, data, Link, useSearchParams } from "react-router";
 import { useState } from "react";
 import type { Route } from "./+types/$slug.dashboard";
 import { requireChildLoaderAuth } from "~/lib/auth.server";
@@ -25,12 +25,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;
   const { userId, tenantId, supabase } = await requireChildLoaderAuth(request, env);
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const url = new URL(request.url);
   const today = todayIST();
+  const year = parseInt(url.searchParams.get("year") ?? "") || new Date().getFullYear();
+  const month = parseInt(url.searchParams.get("month") ?? "") || new Date().getMonth() + 1;
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(
+    new Date(year, month, 0).getDate()
+  ).padStart(2, "0")}`;
 
-  const [employeesRes, upcomingHolidaysRes, countRes, monthAttendance, todayRecord] =
+  const [employeesRes, upcomingHolidaysRes, monthHolidaysRes, countRes, monthAttendance, todayRecord] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -46,6 +50,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         .order("date")
         .limit(5),
       supabase
+        .from("holidays")
+        .select("id, name, date, type")
+        .eq("tenant_id", tenantId)
+        .gte("date", monthStart)
+        .lte("date", monthEnd)
+        .order("date"),
+      supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId),
@@ -59,6 +70,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return data({
     recentEmployees: (employeesRes.data ?? []) as EmployeeRow[],
     upcomingHolidays: (upcomingHolidaysRes.data ?? []) as HolidayRow[],
+    monthHolidays: (monthHolidaysRes.data ?? []) as HolidayRow[],
     totalEmployees: countRes.count ?? 0,
     monthAttendance,
     todayRecord,
@@ -73,6 +85,7 @@ export default function DashboardPage() {
   const {
     recentEmployees,
     upcomingHolidays,
+    monthHolidays,
     totalEmployees,
     monthAttendance,
     todayRecord,
@@ -85,10 +98,15 @@ export default function DashboardPage() {
   const hrUser = isHR(profile.role);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
+  const [, setSearchParams] = useSearchParams();
+
+  function handleMonthNav(year: number, month: number) {
+    setSearchParams({ year: String(year), month: String(month) });
+  }
 
   const calMonthPrefix = `${calYear}-${String(calMonth).padStart(2, "0")}`;
 
-  const markers = buildAttendanceMarkers(monthAttendance, upcomingHolidays, calMonthPrefix);
+  const markers = buildAttendanceMarkers(monthAttendance, monthHolidays, calMonthPrefix);
 
   const selectedMarker = markers.find((m) => m.date === selectedDate);
 
@@ -192,6 +210,7 @@ export default function DashboardPage() {
             initialMonth={calMonth}
             selectedDate={selectedDate}
             onDayClick={(date, _marker) => setSelectedDate(date === selectedDate ? null : date)}
+            onMonthChange={handleMonthNav}
           />
         </div>
 
