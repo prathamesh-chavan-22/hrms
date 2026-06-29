@@ -7,6 +7,7 @@ import { Button } from "~/components/Button";
 import { IcyCard, IcyCardBody } from "~/components/IcyCard";
 import { getTrimmedString, getString } from "~/lib/validation/form-data";
 import { validatePasswordConfirmation } from "~/lib/validation/password";
+import { enforceRateLimit, clientIpKey } from "~/lib/rate-limit.server";
 
 export function meta() {
   return [{ title: "Accept Invitation — Glacia HRMS" }];
@@ -22,6 +23,14 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 export async function action({ params, request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env;
+
+  await enforceRateLimit(request, env, {
+    endpoint: "invite-accept",
+    limit: 10,
+    windowSeconds: 60 * 60,
+    keys: [clientIpKey(request), params.token ?? ""],
+  });
+
   const form = await request.formData();
   const fullName = getTrimmedString(form, "fullName");
   const password = getString(form, "password");

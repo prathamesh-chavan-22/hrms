@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GPS_MAX_AGE_MS, normalizeGpsSubmission } from "./attendance.server";
+import { GPS_MAX_AGE_MS, GPS_MAX_FUTURE_SKEW_MS, normalizeGpsSubmission } from "./attendance.server";
 
 describe("normalizeGpsSubmission", () => {
   const fresh = Date.now() - 30_000;
@@ -51,5 +51,18 @@ describe("normalizeGpsSubmission", () => {
   it("rejects fixes with very poor accuracy", () => {
     const { error } = normalizeGpsSubmission(true, { ...valid, accuracyM: 9_999 });
     expect(error).toMatch(/accuracy/i);
+  });
+
+  it("rejects missing accuracy when GPS is required", () => {
+    const { error } = normalizeGpsSubmission(true, { ...valid, accuracyM: null });
+    expect(error).toMatch(/accuracy/i);
+  });
+
+  it("rejects future-dated GPS captures beyond skew tolerance", () => {
+    const { error } = normalizeGpsSubmission(true, {
+      ...valid,
+      capturedAt: Date.now() + GPS_MAX_FUTURE_SKEW_MS + 1,
+    });
+    expect(error).toMatch(/expired/i);
   });
 });

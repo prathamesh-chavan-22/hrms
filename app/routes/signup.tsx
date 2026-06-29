@@ -8,6 +8,7 @@ import {
 import { fireAndForgetEmail } from "~/lib/email/send-async.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { getTrimmedString, getLowercaseEmail } from "~/lib/validation/form-data";
+import { enforceRateLimit, clientIpKey } from "~/lib/rate-limit.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -26,6 +27,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env;
+
+  await enforceRateLimit(request, env, {
+    endpoint: "company-request",
+    limit: 3,
+    windowSeconds: 60 * 60,
+    keys: [clientIpKey(request)],
+  });
+
   const form = await request.formData();
 
   const companyName = getTrimmedString(form, "companyName");

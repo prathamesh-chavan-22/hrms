@@ -2,6 +2,7 @@ import { data, Form, useActionData, useNavigation, Link } from "react-router";
 import type { Route } from "./+types/forgot-password";
 import { createSupabaseServiceClient } from "~/lib/supabase.server";
 import { submitPasswordResetRequest } from "~/lib/auth.server";
+import { enforceRateLimit, clientIpKey } from "~/lib/rate-limit.server";
 import { sendPasswordResetEscalationEmail } from "~/lib/email.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
@@ -20,6 +21,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!email) {
     return data({ error: "Email is required", submitted: false }, { status: 400 });
   }
+
+  await enforceRateLimit(request, env, {
+    endpoint: "forgot-password",
+    limit: 5,
+    windowSeconds: 60 * 60,
+    keys: [clientIpKey(request), email],
+  });
 
   const result = await submitPasswordResetRequest(env, email);
 

@@ -7,6 +7,7 @@ import {
   getSuperAdminRedirect,
   isActiveProfile,
 } from "~/lib/auth.server";
+import { enforceRateLimit, clientIpKey } from "~/lib/rate-limit.server";
 import { GlaciaLogo } from "~/components/GlaciaLogo";
 import { FormField } from "~/components/FormField";
 import { Button } from "~/components/Button";
@@ -31,6 +32,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env;
+
+  await enforceRateLimit(request, env, {
+    endpoint: "login",
+    limit: 10,
+    windowSeconds: 15 * 60,
+    keys: [clientIpKey(request)],
+  });
+
   const form = await request.formData();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");

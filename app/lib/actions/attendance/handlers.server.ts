@@ -10,6 +10,8 @@ import {
 } from "~/lib/attendance.server";
 import { profileExistsInTenant } from "~/lib/repositories/profiles.repository";
 import { getOptionalFloat, getString } from "~/lib/validation/form-data";
+import { isValidIsoDate } from "~/lib/validation/date";
+import { isAttendanceStatus } from "~/lib/attendance-status";
 import { isHR } from "~/lib/roles";
 
 async function getAttendanceContext(ctx: Parameters<IntentHandler>[0]) {
@@ -80,6 +82,13 @@ export const setStatusHandler: IntentHandler = async (ctx) => {
   const date = getString(ctx.form, "date");
   const status = getString(ctx.form, "status");
   const note = getString(ctx.form, "note");
+
+  if (!isValidIsoDate(date)) {
+    return actionError("Invalid date", intent, 400);
+  }
+  if (!isAttendanceStatus(status)) {
+    return actionError("Invalid attendance status", intent, 400);
+  }
 
   const { data: target } = await profileExistsInTenant(supabase, {
     userId,

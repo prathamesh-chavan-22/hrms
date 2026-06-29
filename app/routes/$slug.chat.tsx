@@ -7,6 +7,7 @@ import type { TenantOutletContext } from "./$slug";
 import { useState, useRef, useEffect } from "react";
 import { resolveChatReply } from "~/lib/chat/handlers.server";
 import { getTrimmedString } from "~/lib/validation/form-data";
+import { enforceRateLimit } from "~/lib/rate-limit.server";
 
 export function meta() {
   return [{ title: "Assistant — Glacia HRMS" }];
@@ -23,6 +24,14 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const slug = params.slug!;
   const env = context.cloudflare.env;
   const { profile, tenant } = await requireTenantAccess(request, env, slug);
+
+  await enforceRateLimit(request, env, {
+    endpoint: "chat",
+    limit: 30,
+    windowSeconds: 60,
+    keys: [profile.id],
+  });
+
   const { supabase } = createSupabaseServerClient(request, env);
   const form = await request.formData();
   const message = getTrimmedString(form, "message").toLowerCase();

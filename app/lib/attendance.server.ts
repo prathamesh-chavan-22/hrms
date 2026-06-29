@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "~/lib/supabase.server";
+import type { AttendanceStatus } from "~/lib/attendance-status";
 import { todayIST } from "~/lib/dates";
 export { todayIST };
 
@@ -7,6 +8,9 @@ export const GPS_MAX_AGE_MS = 3 * 60 * 1000;
 
 /** Reject fixes coarser than this when GPS is required (meters). */
 export const GPS_MAX_ACCURACY_M = 5_000;
+
+/** Max clock skew for future-dated GPS captures (ms). */
+export const GPS_MAX_FUTURE_SKEW_MS = 30_000;
 
 export type GpsSubmission = {
   lat: number | null;
@@ -46,10 +50,13 @@ export function normalizeGpsSubmission(
     return { coords: raw, error: "GPS lock expired — acquire a fresh location and retry" };
   }
   const ageMs = Date.now() - capturedAt;
-  if (ageMs < 0 || ageMs > GPS_MAX_AGE_MS) {
+  if (ageMs < -GPS_MAX_FUTURE_SKEW_MS || ageMs > GPS_MAX_AGE_MS) {
     return { coords: raw, error: "GPS lock expired — acquire a fresh location and retry" };
   }
-  if (accuracyM != null && !Number.isNaN(accuracyM) && accuracyM > GPS_MAX_ACCURACY_M) {
+  if (accuracyM == null || Number.isNaN(accuracyM)) {
+    return { coords: raw, error: "GPS accuracy is required — acquire a fresh location and retry" };
+  }
+  if (accuracyM > GPS_MAX_ACCURACY_M) {
     return { coords: raw, error: "GPS accuracy too low — move to an open area and retry" };
   }
 
@@ -264,7 +271,7 @@ export async function setAttendanceStatus(
     date,
     status,
     note,
-  }: { tenantId: string; userId: string; date: string; status: string; note?: string }
+  }: { tenantId: string; userId: string; date: string; status: AttendanceStatus; note?: string }
 ): Promise<{ error?: string }> {
   const { error } = await supabase
     .from("attendance")

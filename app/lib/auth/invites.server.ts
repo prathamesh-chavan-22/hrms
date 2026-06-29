@@ -136,9 +136,45 @@ export async function acceptInvite(
   params: { fullName: string; password: string }
 ) {
   const service = createSupabaseServiceClient(env);
+  const now = new Date().toISOString();
 
-  const invite = await getInviteByToken(env, token);
-  if (!invite) return { error: "Invalid or expired invite link" };
+  const { data: invite, error: claimError } = await service
+    .from("invites")
+    .update({ accepted_at: now })
+    .eq("token", token)
+    .is("accepted_at", null)
+    .gt("expires_at", now)
+    .select("*, tenant:tenants(slug, name, plan)")
+    .maybeSingle();
+
+  if (claimError) {
+    logServerError("acceptInvite", "Failed to claim invite", claimError);
+    return { error: "Failed to accept invite. Please try again." };
+  }
+
+  if (!invite) {
+    const { data: existing } = await service
+      .from("invites")
+      .select("accepted_at, expires_at")
+      .eq("token", token)
+      .maybeSingle();
+
+    if (existing?.accepted_at) {
+      return { error: "This invite has already been accepted. Try signing in." };
+    }
+    return { error: "Invalid or expired invite link" };
+  }
+
+  async function rollbackClaim() {
+    const { error } = await service
+      .from("invites")
+      .update({ accepted_at: null })
+      .eq("token", token)
+      .eq("accepted_at", now);
+    if (error) {
+      logServerError("acceptInvite", "Failed to rollback invite claim", error);
+    }
+  }
 
   const tenantPlan = (invite.tenant as { plan: string } | null)?.plan ?? "starter";
   const { count } = await service
@@ -146,6 +182,7 @@ export async function acceptInvite(
     .select("id", { count: "exact", head: true })
     .eq("tenant_id", invite.tenant_id);
   if (!canAddEmployee(tenantPlan, count ?? 0)) {
+    await rollbackClaim();
     return { error: "This company has reached its plan limit. Contact the HR admin." };
   }
 
@@ -157,7 +194,12 @@ export async function acceptInvite(
   });
 
   if (authError || !authData.user) {
-    return { error: authError?.message ?? "Failed to create account" };
+    await rollbackClaim();
+    const message = authError?.message ?? "Failed to create account";
+    if (message.toLowerCase().includes("already")) {
+      return { error: "An account with this email already exists. Try signing in." };
+    }
+    return { error: message };
   }
 
   const { error: profileError } = await service.from("profiles").insert({
@@ -171,16 +213,8 @@ export async function acceptInvite(
 
   if (profileError) {
     await service.auth.admin.deleteUser(authData.user.id);
+    await rollbackClaim();
     return { error: profileError.message };
-  }
-
-  const { error: inviteError } = await service
-    .from("invites")
-    .update({ accepted_at: new Date().toISOString() })
-    .eq("token", token);
-
-  if (inviteError) {
-    logServerError("acceptInvite", "Failed to mark invite accepted", inviteError);
   }
 
   return { success: true, email: invite.email };

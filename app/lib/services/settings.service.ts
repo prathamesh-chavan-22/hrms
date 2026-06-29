@@ -7,7 +7,11 @@ import {
   getTenantLogoPublicUrl,
 } from "~/lib/repositories/tenants.repository";
 
-const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+import {
+  detectRasterImageType,
+  extensionForImageType,
+} from "~/lib/validation/image-bytes";
+
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 export async function updateCompanySettings(
@@ -39,18 +43,20 @@ export async function uploadCompanyLogo(
   const { file, tenantId } = params;
   if (!file || file.size === 0) return { error: "Please select a logo file" };
   if (file.size > MAX_LOGO_BYTES) return { error: "Logo must be under 2 MB" };
-  if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-    return { error: "Only PNG, JPEG, WebP, or SVG allowed" };
+
+  const arrayBuffer = await file.arrayBuffer();
+  const detectedType = detectRasterImageType(arrayBuffer);
+  if (!detectedType) {
+    return { error: "Only PNG, JPEG, or WebP images are allowed" };
   }
 
-  const ext = file.name.split(".").pop() ?? "png";
+  const ext = extensionForImageType(detectedType);
   const path = `${tenantId}/logo.${ext}`;
-  const arrayBuffer = await file.arrayBuffer();
 
   const { error: uploadError } = await uploadTenantLogo(supabase, {
     path,
     data: arrayBuffer,
-    contentType: file.type,
+    contentType: detectedType,
   });
 
   if (uploadError) return { error: uploadError.message };

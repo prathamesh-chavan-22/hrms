@@ -10,7 +10,14 @@
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true,
+	"upload_source_maps": false,
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT_KV",
+			"id": "4780a018dd2d43a484d13ffd53590710",
+			"preview_id": "ae9ddeb455fd4030a22192c0e5b1cd54"
+		}
+	],
 	"vars": {
 		"APP_BASE_URL": "https://glacia.supernovae.me",
 		"BILLING_ENABLED": "false"
