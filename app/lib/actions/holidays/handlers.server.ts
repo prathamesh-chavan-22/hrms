@@ -3,6 +3,7 @@ import { actionSuccess, actionError } from "../action-result";
 import { requireHR } from "~/lib/auth/guards.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { getString, getTrimmedString } from "~/lib/validation/form-data";
+import { isValidIsoDate } from "~/lib/validation/date";
 import {
   createHoliday,
   updateHoliday,
@@ -29,6 +30,7 @@ export const createHolidayHandler: IntentHandler = async (ctx) => {
 
   if (!name) return actionError("Holiday name is required.", intent);
   if (!date) return actionError("Date is required.", intent);
+  if (!isValidIsoDate(date)) return actionError("Invalid date.", intent);
   if (!VALID_TYPES.includes(type as (typeof VALID_TYPES)[number])) {
     return actionError("Invalid holiday type.", intent);
   }
@@ -64,6 +66,7 @@ export const updateHolidayHandler: IntentHandler = async (ctx) => {
   if (!id) return actionError("Holiday ID is required.", intent);
   if (!name) return actionError("Holiday name is required.", intent);
   if (!date) return actionError("Date is required.", intent);
+  if (!isValidIsoDate(date)) return actionError("Invalid date.", intent);
   if (!VALID_TYPES.includes(type as (typeof VALID_TYPES)[number])) {
     return actionError("Invalid holiday type.", intent);
   }
