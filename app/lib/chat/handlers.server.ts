@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile, Tenant } from "~/types/app";
 import { todayIST } from "~/lib/dates";
+import { loadLeaveBalances } from "~/lib/services/leave.service";
 
 export type ChatHandlerContext = {
   supabase: SupabaseClient;
@@ -10,15 +11,18 @@ export type ChatHandlerContext = {
 
 export type ChatQueryHandler = (ctx: ChatHandlerContext) => Promise<string>;
 
-export const leaveBalanceHandler: ChatQueryHandler = async ({ supabase, tenant }) => {
-  const { data: leaveTypes } = await supabase
-    .from("leave_types")
-    .select("name, code, days_per_year")
-    .eq("tenant_id", tenant.id);
-  const list = (leaveTypes ?? [])
-    .map((lt) => `${lt.name} (${lt.code}): ${lt.days_per_year} days/year`)
+export const leaveBalanceHandler: ChatQueryHandler = async ({ supabase, profile, tenant }) => {
+  const year = new Date().getFullYear();
+  const balances = await loadLeaveBalances(supabase, {
+    tenantId: tenant.id,
+    userId: profile.id,
+    year,
+  });
+  const list = balances
+    .filter((b) => b.days_per_year > 0)
+    .map((b) => `${b.code}: ${b.remaining}/${b.entitled} remaining`)
     .join(", ");
-  return `Your company leave types: ${list || "None configured yet."}`;
+  return list ? `Your leave balance: ${list}.` : "No leave types configured yet.";
 };
 
 export const holidaysHandler: ChatQueryHandler = async ({ supabase, tenant }) => {
